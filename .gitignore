@@ -63,3 +63,6 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+# Claude
+.claude/settings.local.json
