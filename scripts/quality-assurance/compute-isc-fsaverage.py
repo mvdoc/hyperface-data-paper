@@ -9,7 +9,7 @@ import os
 import pandas as pd
 import scipy.linalg as la
 
-from budapestcode.utils import clean_data
+from hyperface.utils import clean_data
 
 # Process is
 # 1. Load runs
@@ -18,7 +18,7 @@ from budapestcode.utils import clean_data
 # 4. stack
 # 5. compute isc
 
-data_dir = os.path.abspath('../../outputs/fmriprep')
+data_dir = os.path.abspath('../../data/derivatives/fmriprep')
 
 
 def load_gifti(fn):
@@ -50,7 +50,7 @@ def load_data(subject):
 def load_confounds(subject):
     datadir = f"{data_dir}/{subject}/func"
     confounds = []
-    confounds_fn = sorted(glob(f'../../outputs/fmriprep/{subject}/func/*tsv'))
+    confounds_fn = sorted(glob(f'../../data/derivatives/fmriprep/{subject}/func/*tsv'))
     for conf in confounds_fn:
         print(conf.split('/')[-1])
         confounds.append(pd.read_csv(conf, sep='\t'))
@@ -102,7 +102,7 @@ for isubject, subject in enumerate(subjects):
 
 correlations = np.array(correlations)
 
-DIROUT = '../../outputs/datapaper/isc'
+DIROUT = '../../data/derivatives/qa/isc'
 os.makedirs(DIROUT, exist_ok=True)
 np.save(f'{DIROUT}/isc-correlations-all-subjects-fsaverage.npy', correlations)
 

@@ -1,6 +1,65 @@
-*.ipynb_checkpoints
-*.egg-info
-__pycache__
-workdir
-singularity
-.idea
+# Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# UV package manager
+.uv/
+
+# Jupyter
+*.ipynb_checkpoints/
+*.ipynb_output
+
+# Jupyter Book
+docs/_build/
+_build/
+
+# Data (will be managed separately as submodule)
+data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Neuroimaging specific
+workdir/
+singularity/
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp

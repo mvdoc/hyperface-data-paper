@@ -12,8 +12,8 @@ import scipy.linalg as la
 
 from glob import glob
 
-from budapestcode.utils import compute_tsnr
-from budapestcode.viz import make_mosaic, plot_mosaic
+from hyperface.utils import compute_tsnr
+from hyperface.viz import make_mosaic, plot_mosaic
 
 if len(sys.argv) < 2:
     print(f"Usage: {os.path.basename(__file__)} subject_id")
@@ -25,9 +25,9 @@ if not subject.startswith('sub-'):
 
 HERE = os.path.dirname(__file__)
 
-OUTPUT_DIR = os.path.abspath(os.path.join(HERE, '../../outputs'))
-INDIR = f"{OUTPUT_DIR}/fmriprep"
-OUTDIR = f"{OUTPUT_DIR}/datapaper/tsnr"
+DATA_DIR = os.path.abspath(os.path.join(HERE, '../../data'))
+INDIR = f"{DATA_DIR}/derivatives/fmriprep"
+OUTDIR = f"{DATA_DIR}/derivatives/qa/tsnr"
 
 func_fns = sorted(glob(f'{INDIR}/{subject}/func/*space-fsaverage_hemi-*_bold.func.gii'))
 conf_fns = sorted(glob(f'{INDIR}/{subject}/func/*tsv'))

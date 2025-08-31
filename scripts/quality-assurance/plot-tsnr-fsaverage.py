@@ -9,8 +9,8 @@ cortex.utils.download_subject(subject_id='fsaverage', download_again=False)
 # We are going to compute median tSNR across all runs.
 # We already pre-computed it for each subject, so we just need to
 # load those files and then compute the median across subjects.
-median_tsnr_left = sorted(glob('../../outputs/datapaper/tsnr/sub-*/*median*hemi-L*npy'))
-median_tsnr_right = sorted(glob('../../outputs/datapaper/tsnr/sub-*/*median*hemi-R*npy'))
+median_tsnr_left = sorted(glob('../../data/derivatives/qa/tsnr/sub-*/*median*hemi-L*npy'))
+median_tsnr_right = sorted(glob('../../data/derivatives/qa/tsnr/sub-*/*median*hemi-R*npy'))
 
 assert len(median_tsnr_left) == 25
 assert len(median_tsnr_right) == 25
@@ -35,9 +35,9 @@ viewer_params = dict(
     overlays_visible=[]
 )
 fig = cortex.export.plot_panels(surface, windowsize=windowsize, viewer_params=viewer_params, **params)
-fig.savefig('../../outputs/datapaper/tsnr/figures/group_inflated_median-tsnr-fsaverage-hotcmap.png',
+fig.savefig('../../data/derivatives/qa/tsnr/figures/group_inflated_median-tsnr-fsaverage-hotcmap.png',
             dpi=300)
 
 fig = cortex.quickflat.make_figure(surface, with_rois=False, with_curvature=True, colorbar_location='right', height=2048)
-fig.savefig('../../outputs/datapaper/tsnr/figures/group_flatmap_median-tsnr-fsaverage-hotcmap.png',
+fig.savefig('../../data/derivatives/qa/tsnr/figures/group_flatmap_median-tsnr-fsaverage-hotcmap.png',
             dpi=300)

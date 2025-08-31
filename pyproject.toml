@@ -1,0 +1,96 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hyperface"
+version = "0.1.0"
+description = "Analysis code for the Hyperface fMRI dataset"
+authors = [
+    {name = "Matteo Visconti di Oleggio Castello", email = "mvdoc@berkeley.edu"},
+    {name = "Jiahui Guo", email = "jiahui.guo@dartmouth.edu"}
+]
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
+dependencies = [
+    "numpy>=1.18.0",
+    "scipy>=1.4.0",
+    "pandas>=1.0.0",
+    "matplotlib>=3.1.0",
+    "seaborn>=0.10.0",
+    "nibabel>=3.0.0",
+    "nilearn>=0.6.0",
+    "scikit-learn>=0.22.0",
+    "jupyterlab>=3.0.0",
+    "ipywidgets>=7.5.0",
+    "h5py>=2.10.0",
+    "pillow>=7.0.0",
+    "lxml>=4.5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "black>=21.0",
+    "isort>=5.0",
+    "flake8>=3.8",
+    "mypy>=0.800",
+]
+docs = [
+    "jupyter-book>=0.15.0",
+    "sphinx>=4.0.0",
+    "myst-parser>=0.18.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/mvdoc/hyperface-data-paper"
+Repository = "https://github.com/mvdoc/hyperface-data-paper"
+Documentation = "https://mvdoc.github.io/hyperface-data-paper"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.black]
+line-length = 88
+target-version = ["py38", "py39", "py310", "py311"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["hyperface"]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true

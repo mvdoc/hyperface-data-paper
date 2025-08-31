@@ -5,7 +5,7 @@ import cortex
 import os
 from glob import glob
 
-data_dir = os.path.abspath('../../outputs/fmriprep')
+data_dir = os.path.abspath('../../data/derivatives/fmriprep')
 
 
 def get_subjects():
@@ -15,7 +15,7 @@ def get_subjects():
 
 subjects = get_subjects()
 
-data = np.load('../../outputs/datapaper/isc/isc-correlations-all-subjects-fsaverage.npy')
+data = np.load('../../data/derivatives/qa/isc/isc-correlations-all-subjects-fsaverage.npy')
 data_median = np.median(data, 0)
 # surfaces = dict()
 surface = cortex.Vertex(data_median, 'fsaverage', cmap='hot', vmin=0, vmax=0.5)
@@ -29,9 +29,9 @@ viewer_params = dict(
     overlays_visible=[]
 )
 fig = cortex.export.plot_panels(surface, windowsize=windowsize, viewer_params=viewer_params, **params)
-fig.savefig('../../outputs/datapaper/isc/median-isc-fsaverage-hotcmap.png',
+fig.savefig('../../data/derivatives/qa/isc/median-isc-fsaverage-hotcmap.png',
             dpi=300)
 
 fig = cortex.quickflat.make_figure(surface, with_rois=False, colorbar_location='right', height=2048)
-fig.savefig('../../outputs/datapaper/isc/flatmap_median-isc-fsaverage-hotcmap.png',
+fig.savefig('../../data/derivatives/qa/isc/flatmap_median-isc-fsaverage-hotcmap.png',
             dpi=300)
