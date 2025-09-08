@@ -36,7 +36,7 @@ cd hyperface-data-paper
 # Create virtual environment and install dependencies
 uv venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-uv pip install -e .
+uv sync
 ```
 
 ### Data Setup
@@ -79,7 +79,7 @@ This repository generates a Jupyter Book website with QA results:
 
 ```bash
 # Install docs dependencies
-uv pip install -e ".[docs]"
+uv sync --extra docs
 
 # Build the book
 jupyter-book build docs/
