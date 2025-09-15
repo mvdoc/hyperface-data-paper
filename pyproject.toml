@@ -41,6 +41,7 @@ dependencies = [
     "lxml>=4.5.0",
     "ruff>=0.12.12",
     "tqdm>=4.67.1",
+    "jinja2>=3.0.0",
 ]
 
 [project.optional-dependencies]
