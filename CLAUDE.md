@@ -19,7 +19,14 @@ uv pip install -e ".[docs]"
 ```
 
 ### Quality Assurance Pipeline
+
+#### tSNR Analysis
 ```bash
+# Generate tSNR plots and HTML reports (volume space)
+python scripts/qa-plot-tsnr.py                    # All subjects
+python scripts/qa-plot-tsnr.py --subjects sub-001 # Specific subjects
+python scripts/qa-generate-html-reports.py        # Generate HTML reports
+
 # Compute tSNR for individual subjects (volume space)
 python scripts/quality-assurance/compute-tsnr-volume.py sub-001
 
@@ -32,6 +39,21 @@ python scripts/quality-assurance/compute-isc-fsaverage.py
 # Generate surface visualizations
 python scripts/quality-assurance/plot-tsnr-fsaverage.py
 python scripts/quality-assurance/plot-isc-fsaverage.py
+```
+
+#### Motion Analysis
+```bash
+# Generate motion QA plots and HTML reports
+python scripts/qa-plot-motion.py                           # All subjects
+python scripts/qa-plot-motion.py --subjects sub-001        # Specific subjects
+python scripts/qa-generate-html-reports-motion.py          # Generate HTML reports
+
+# Outputs:
+# - Motion parameter traces (translation/rotation) per run
+# - Framewise displacement (FD) traces per run
+# - FD violin plots across runs and subjects
+# - Interactive HTML reports with session navigation
+# - Files saved to: data/derivatives/qa/motion/
 ```
 
 ### Documentation
@@ -74,10 +96,11 @@ flake8 src/ scripts/
 ### Analysis Pipeline Architecture
 The QA pipeline follows a structured workflow:
 1. **Data cleaning**: Uses fMRIprep confounds (motion, global signal, aCompCor, framewise displacement) + polynomial regressors
-2. **tSNR computation**: Temporal signal-to-noise ratio after confound regression  
-3. **Surface mapping**: Projects volume data to fsaverage cortical surface
-4. **Inter-subject correlation**: Leave-one-out analysis for stimulus consistency
-5. **Visualization**: Both volume mosaics and cortical surface plots
+2. **tSNR computation**: Temporal signal-to-noise ratio after confound regression
+3. **Motion analysis**: Extract and visualize motion parameters and framewise displacement from fMRIprep confounds
+4. **Surface mapping**: Projects volume data to fsaverage cortical surface
+5. **Inter-subject correlation**: Leave-one-out analysis for stimulus consistency
+6. **Visualization**: Volume mosaics, cortical surface plots, motion traces, and interactive HTML reports
 
 ### Script Organization
 - **`scripts/quality-assurance/`**: Core QA pipeline scripts that output to `data/derivatives/qa/`
