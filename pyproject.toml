@@ -93,4 +93,12 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.pyright]
-exclude = ["data"]
+exclude = [
+    "data/**",
+    "private/**",
+    "workdir/**",
+    ".datalad/**",
+    ".claude/**",
+    ".*cache/**",
+    "**/__pycache__",
+]
