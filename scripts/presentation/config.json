@@ -1,0 +1,9 @@
+{
+  "instructions":
+    "You will watch a series of videoclips. Please pay attention to the people appearing in those clips.\n\nAt the end of the run you will be asked to report whether some people appeared earlier in the run.",
+  "task_name": "visualmemory",
+  "log_template": "sub-{subj}_ses-{sesnr}_task-{task_name}_run-{runnr}_{timestamp}.txt",
+  "log_subjects": "subjectlog.tsv",
+  "max_run": 12,
+  "max_run_session": 6
+}
