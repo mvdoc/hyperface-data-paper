@@ -330,6 +330,107 @@ def create_violin_plots_by_session(
         print(f"      Saved: {output_filename}")
 
 
+def create_group_tsnr_violin_plot(
+    tsnr_dir: str, fmriprep_dir: str, subjects: List[str]
+) -> None:
+    """Create group-level tSNR violin plot across all subjects."""
+    print("\nCreating group-level tSNR violin plot...")
+
+    subject_tsnr_data = []
+    subject_labels = []
+
+    for subject in subjects:
+        subject_dir = Path(tsnr_dir) / subject
+        if not subject_dir.exists():
+            continue
+
+        # Find all tSNR files for this subject (handles sessions and no-sessions)
+        tsnr_files = list(subject_dir.glob("**/*_desc-tsnr.nii.gz"))
+        if not tsnr_files:
+            continue
+
+        # Find corresponding brain masks from fMRIprep
+        mask_files = []
+        for tsnr_file in tsnr_files:
+            tsnr_basename = os.path.basename(str(tsnr_file))
+            mask_basename = tsnr_basename.replace("desc-tsnr", "desc-brain_mask")
+
+            # Search in fMRIprep directory
+            fmriprep_masks = list(
+                Path(fmriprep_dir).glob(f"{subject}/**/func/{mask_basename}")
+            )
+            if fmriprep_masks:
+                mask_files.append(fmriprep_masks[0])
+
+        if not mask_files:
+            print(f"  Warning: No brain masks found for {subject}, skipping")
+            continue
+
+        # Create conjunction brain mask
+        reference_shape = nib.load(tsnr_files[0]).get_fdata().shape
+        brainmask = np.ones(reference_shape)
+        for mask_file in mask_files:
+            mask_data = nib.load(mask_file).get_fdata()
+            brainmask *= mask_data
+
+        # Load all tSNR volumes
+        tsnr_volumes = []
+        for tsnr_file in tsnr_files:
+            data = nib.load(tsnr_file).get_fdata()
+            tsnr_volumes.append(data)
+
+        # Compute median tSNR across runs
+        if len(tsnr_volumes) > 1:
+            median_tsnr = np.median(tsnr_volumes, axis=0)
+        else:
+            median_tsnr = tsnr_volumes[0]
+
+        # Extract masked voxels
+        masked_data = median_tsnr[brainmask.astype(bool)]
+
+        if len(masked_data) > 0:
+            subject_tsnr_data.append(masked_data)
+            subject_labels.append(subject)
+
+    if not subject_tsnr_data:
+        print("  No tSNR data found for group plot")
+        return
+
+    # Create violin plot
+    fig, ax = plt.subplots(1, 1, figsize=(max(12, len(subject_tsnr_data) * 0.8), 6))
+    positions = list(range(len(subject_tsnr_data)))
+
+    parts = ax.violinplot(subject_tsnr_data, positions=positions, showmedians=True)
+
+    # Style the violins
+    for pc in parts["bodies"]:
+        pc.set_facecolor("lightblue")
+        pc.set_edgecolor("navy")
+        pc.set_alpha(0.7)
+
+    for part_name in ["cbars", "cmins", "cmaxes", "cmedians"]:
+        if part_name in parts:
+            parts[part_name].set_edgecolor("navy")
+            parts[part_name].set_linewidth(1.5)
+
+    ax.set_xticks(positions)
+    ax.set_xticklabels(subject_labels, fontsize=10, rotation=45, ha="right")
+    ax.set_ylabel("tSNR", fontsize=12)
+    ax.set_title("Group tSNR Distribution Across All Subjects", fontsize=14, pad=20)
+
+    # Add y-grid
+    ax.grid(True, axis="y", alpha=0.3)
+
+    sns.despine()
+    plt.tight_layout()
+
+    # Save plot
+    output_path = os.path.join(tsnr_dir, "group_desc-tsnr_violinplot.png")
+    fig.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print("  Saved: group_desc-tsnr_violinplot.png")
+
+
 def process_subject(subject: str, tsnr_base_dir: str, fmriprep_dir: str) -> None:
     """Process a single subject to create all plots."""
     print(f"Processing {subject}...")
@@ -460,8 +561,12 @@ def main():
             print(f"Error processing {subject}: {str(e)}")
             continue
 
+    # Create group-level violin plot
+    create_group_tsnr_violin_plot(tsnr_dir, fmriprep_dir, subjects)
+
     print(f"\nCompleted processing {len(subjects)} subjects")
     print(f"Figures saved to: {tsnr_dir}/*/figures/")
+    print(f"Group plot saved to: {tsnr_dir}/group_desc-tsnr_violinplot.png")
 
 
 if __name__ == "__main__":

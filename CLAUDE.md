@@ -14,8 +14,13 @@ uv pip install -e .
 # Install development dependencies
 uv pip install -e ".[dev]"
 
-# Install documentation dependencies  
+# Install documentation dependencies
 uv pip install -e ".[docs]"
+```
+
+**Important:** Always activate the virtual environment before running any Python scripts:
+```bash
+source .venv/bin/activate && python scripts/...
 ```
 
 ### Quality Assurance Pipeline
@@ -25,7 +30,7 @@ uv pip install -e ".[docs]"
 # Generate tSNR plots and HTML reports (volume space)
 python scripts/qa-plot-tsnr.py                    # All subjects
 python scripts/qa-plot-tsnr.py --subjects sub-001 # Specific subjects
-python scripts/qa-generate-html-reports.py        # Generate HTML reports
+python scripts/qa-generate-html-reports-tsnr.py   # Generate HTML reports
 
 # Compute tSNR for individual subjects (volume space)
 python scripts/quality-assurance/compute-tsnr-volume.py sub-001
