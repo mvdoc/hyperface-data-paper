@@ -354,13 +354,13 @@ def parse_arguments():
         epilog="""
 Examples:
   # Generate reports for all subjects
-  python scripts/qa-generate-html-reports-motion.py
+  python scripts/qa/qa-generate-html-reports-motion.py
 
   # Generate reports for specific subjects
-  python scripts/qa-generate-html-reports-motion.py --subjects sub-001 sub-002
+  python scripts/qa/qa-generate-html-reports-motion.py --subjects sub-001 sub-002
 
   # Use custom data directory
-  python scripts/qa-generate-html-reports-motion.py --data-dir /path/to/data
+  python scripts/qa/qa-generate-html-reports-motion.py --data-dir /path/to/data
 """,
     )
 

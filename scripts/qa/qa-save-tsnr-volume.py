@@ -180,19 +180,19 @@ def parse_arguments():
         epilog="""
 Examples:
   # Process all subjects, sessions, and tasks
-  python scripts/qa-save-tsnr-volume.py
+  python scripts/qa/qa-save-tsnr-volume.py
 
   # Process specific subjects
-  python scripts/qa-save-tsnr-volume.py --subjects sub-001 sub-002
+  python scripts/qa/qa-save-tsnr-volume.py --subjects sub-001 sub-002
 
   # Process specific sessions and tasks
-  python scripts/qa-save-tsnr-volume.py --sessions ses-1 ses-2 --tasks localizer
+  python scripts/qa/qa-save-tsnr-volume.py --sessions ses-1 ses-2 --tasks localizer
 
   # Use custom config file
-  python scripts/qa-save-tsnr-volume.py --config /path/to/custom-config.yaml
+  python scripts/qa/qa-save-tsnr-volume.py --config /path/to/custom-config.yaml
 
   # Preview what would be processed
-  python scripts/qa-save-tsnr-volume.py --dry-run
+  python scripts/qa/qa-save-tsnr-volume.py --dry-run
 """,
     )
 

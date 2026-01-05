@@ -498,13 +498,13 @@ def parse_arguments():
         epilog="""
 Examples:
   # Process all subjects
-  python scripts/qa-plot-motion.py
+  python scripts/qa/qa-plot-motion.py
 
   # Process specific subjects
-  python scripts/qa-plot-motion.py --subjects sub-001 sub-002
+  python scripts/qa/qa-plot-motion.py --subjects sub-001 sub-002
 
   # Use custom data directory
-  python scripts/qa-plot-motion.py --data-dir /path/to/data
+  python scripts/qa/qa-plot-motion.py --data-dir /path/to/data
 """,
     )
 

@@ -1,23 +1,29 @@
-# Scripts
+# Quality Assurance Scripts
 
-## Quality Assurance Pipeline
-
-### tSNR Analysis
+## tSNR Analysis
 - `qa-save-tsnr-volume.py` - Compute temporal signal-to-noise ratio (tSNR) for fMRI data in volume space
 - `qa-plot-tsnr.py` - Generate quality assurance visualizations from pre-computed tSNR data
+- `qa-generate-html-reports-tsnr.py` - Generate interactive HTML reports for tSNR
 
-### Usage
+## Motion Analysis
+- `qa-plot-motion.py` - Generate motion QA plots (motion traces, FD, violin plots)
+- `qa-generate-html-reports-motion.py` - Generate interactive HTML reports for motion
+
+## Usage
 
 ```bash
 # Step 1: Compute tSNR for all subjects
-python scripts/qa-save-tsnr-volume.py
+python scripts/qa/qa-save-tsnr-volume.py
 
-# Step 2: Generate QA plots for all subjects  
-python scripts/qa-plot-tsnr.py
+# Step 2: Generate QA plots for all subjects
+python scripts/qa/qa-plot-tsnr.py
 
 # Or process specific subjects
-python scripts/qa-save-tsnr-volume.py --subjects sub-001 sub-002
-python scripts/qa-plot-tsnr.py --subjects sub-001 sub-002
+python scripts/qa/qa-save-tsnr-volume.py --subjects sub-001 sub-002
+python scripts/qa/qa-plot-tsnr.py --subjects sub-001 sub-002
+
+# Generate motion QA plots
+python scripts/qa/qa-plot-motion.py
 ```
 
 ### Output Structure

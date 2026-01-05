@@ -20,7 +20,7 @@ uv pip install -e ".[docs]"
 
 **Important:** Always activate the virtual environment before running any Python scripts:
 ```bash
-source .venv/bin/activate && python scripts/...
+source .venv/bin/activate && python scripts/qa/...
 ```
 
 ### Quality Assurance Pipeline
@@ -28,30 +28,24 @@ source .venv/bin/activate && python scripts/...
 #### tSNR Analysis
 ```bash
 # Generate tSNR plots and HTML reports (volume space)
-python scripts/qa-plot-tsnr.py                    # All subjects
-python scripts/qa-plot-tsnr.py --subjects sub-001 # Specific subjects
-python scripts/qa-generate-html-reports-tsnr.py   # Generate HTML reports
+python scripts/qa/qa-plot-tsnr.py                    # All subjects
+python scripts/qa/qa-plot-tsnr.py --subjects sub-001 # Specific subjects
+python scripts/qa/qa-generate-html-reports-tsnr.py   # Generate HTML reports
 
-# Compute tSNR for individual subjects (volume space)
-python scripts/quality-assurance/compute-tsnr-volume.py sub-001
-
-# Compute tSNR for fsaverage surface
-python scripts/quality-assurance/compute-tsnr-fsaverage.py sub-001
-
-# Compute inter-subject correlation across all subjects
-python scripts/quality-assurance/compute-isc-fsaverage.py
-
-# Generate surface visualizations
-python scripts/quality-assurance/plot-tsnr-fsaverage.py
-python scripts/quality-assurance/plot-isc-fsaverage.py
+# Example scripts for reference (from Budapest dataset)
+python scripts/examples/compute-tsnr-volume.py sub-001
+python scripts/examples/compute-tsnr-fsaverage.py sub-001
+python scripts/examples/compute-isc-fsaverage.py
+python scripts/examples/plot-tsnr-fsaverage.py
+python scripts/examples/plot-isc-fsaverage.py
 ```
 
 #### Motion Analysis
 ```bash
 # Generate motion QA plots and HTML reports
-python scripts/qa-plot-motion.py                           # All subjects
-python scripts/qa-plot-motion.py --subjects sub-001        # Specific subjects
-python scripts/qa-generate-html-reports-motion.py          # Generate HTML reports
+python scripts/qa/qa-plot-motion.py                           # All subjects
+python scripts/qa/qa-plot-motion.py --subjects sub-001        # Specific subjects
+python scripts/qa/qa-generate-html-reports-motion.py          # Generate HTML reports
 
 # Outputs:
 # - Motion parameter traces (translation/rotation) per run
@@ -73,16 +67,16 @@ jupyter-book clean docs/
 ### Code Quality
 ```bash
 # Format code with Black
-black src/ scripts/ notebooks/
+black src/ scripts/qa/ notebooks/
 
 # Sort imports
-isort src/ scripts/
+isort src/ scripts/qa/
 
 # Type checking
 mypy src/
 
 # Linting
-flake8 src/ scripts/
+flake8 src/ scripts/qa/
 ```
 
 ## Code Architecture
@@ -108,11 +102,9 @@ The QA pipeline follows a structured workflow:
 6. **Visualization**: Volume mosaics, cortical surface plots, motion traces, and interactive HTML reports
 
 ### Script Organization
-- **`scripts/quality-assurance/`**: Core QA pipeline scripts that output to `data/derivatives/qa/`
-- **`scripts/preprocessing-fmri/`**: fMRIprep execution scripts
-- **`scripts/hyperalignment_and_decoding/`**: Advanced analysis methods
+- **`scripts/qa/`**: Quality assurance pipeline scripts that output to `data/derivatives/qa/`
 - **`scripts/presentation/`**: Stimulus presentation code
-- **`scripts/preprocessing-stimulus/`**: Stimulus preparation utilities
+- **`scripts/examples/`**: Example scripts from Budapest dataset (for reference)
 
 ### Jupyter Book Integration
 - **`docs/`**: Jupyter Book configuration for web documentation
