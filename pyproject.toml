@@ -13,16 +13,16 @@ authors = [
 ]
 readme = "README.md"
 license = {file = "LICENSE"}
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: BSD License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
 ]
 dependencies = [
@@ -44,6 +44,7 @@ dependencies = [
     "tqdm>=4.67.1",
     "jinja2>=3.0.0",
     "pyyaml>=6.0",
+    "pybids>=0.16.0",
 ]
 
 [project.optional-dependencies]
@@ -69,11 +70,16 @@ where = ["src"]
 "" = "src"
 
 [tool.setuptools.package-data]
-hyperface = ["assets/*.yaml"]
+hyperface = ["assets/*.yaml", "templates/*.html"]
 
 [tool.ruff]
 line-length = 88
-target-version = "py38"
+target-version = "py39"
+# Exclude archival code that should not be modified
+exclude = [
+    "scripts/presentation/**",  # Legacy Python 2 stimulus presentation code
+    "scripts/examples/**",      # Reference scripts from Budapest dataset
+]
 
 [tool.ruff.lint]
 select = [

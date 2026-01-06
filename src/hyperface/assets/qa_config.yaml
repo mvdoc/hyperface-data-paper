@@ -1,0 +1,40 @@
+# QA Pipeline Configuration
+# This file specifies directory paths and defaults for QA scripts.
+# Edit this file to customize paths for your setup, or set HYPERFACE_QA_CONFIG
+# environment variable to point to a custom config file.
+
+directories:
+  # Base data directory (relative to project root or absolute path)
+  data_dir: "data"
+
+  # Derivatives directory within data_dir
+  derivatives_dir: "derivatives"
+
+  # Input derivatives
+  fmriprep: "fmriprep"
+  freesurfer: "freesurfer"
+
+  # QA output structure (under derivatives_dir)
+  qa:
+    base: "qa"
+    tsnr: "tsnr"
+    motion: "motion"
+    isc: "isc"
+
+# Default processing parameters
+defaults:
+  space: "T1w"
+  tsnr_vmin: 0
+  tsnr_vmax: 150
+  fd_threshold: 0.5
+
+# Violin plot styling presets
+plot_style:
+  default:
+    facecolor: "lightblue"
+    edgecolor: "navy"
+    alpha: 0.7
+  fd:
+    facecolor: "lightcoral"
+    edgecolor: "darkred"
+    alpha: 0.7
