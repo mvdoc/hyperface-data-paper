@@ -10,6 +10,7 @@ from hyperface.io import (
     load_run_order_config,
     normalize_subject_id,
 )
+from hyperface.isc import compute_isc, get_clip_tr_mask, zscore
 
 __all__ = [
     "normalize_subject_id",
@@ -18,4 +19,7 @@ __all__ = [
     "load_events",
     "get_run_order",
     "load_run_order_config",
+    "compute_isc",
+    "get_clip_tr_mask",
+    "zscore",
 ]

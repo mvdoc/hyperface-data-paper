@@ -11,6 +11,8 @@ import numpy as np
 import pandas as pd
 import yaml
 
+from hyperface.utils import clean_data
+
 DEFAULT_DATA_DIR = Path("data")
 
 
@@ -100,7 +102,8 @@ def load_run_order_config() -> dict:
         config_text = config_file.read_text()
     except AttributeError:
         # Python 3.8 fallback
-        with resources.open_text("hyperface.assets", "visualmemory_run_order.yaml") as f:
+        config_filename = "visualmemory_run_order.yaml"
+        with resources.open_text("hyperface.assets", config_filename) as f:
             config_text = f.read()
 
     return yaml.safe_load(config_text)
@@ -204,6 +207,7 @@ def load_responses(
     task: str = "visualmemory",
     space: str = "fsaverage6",
     data_dir: Path | str | None = None,
+    clean: bool = True,
 ) -> list[np.ndarray]:
     """Load fMRI response data for one subject, aligned to stimulus order.
 
@@ -219,6 +223,9 @@ def load_responses(
         - "T1w": Volume data (NIfTI)
     data_dir : str or Path, optional
         Path to BIDS dataset root. If None, uses "data" relative to cwd.
+    clean : bool, default=True
+        If True, regress out confounds from each run before returning.
+        This saves memory by not storing both raw and cleaned data.
 
     Returns
     -------
@@ -239,9 +246,20 @@ def load_responses(
     runs_info = _get_run_files(subject, task)
     subject_id = normalize_subject_id(subject)
 
+    # Load confounds upfront if cleaning
+    confounds_list = None
+    if clean:
+        confounds_list = _load_tsv_files(
+            subject=subject,
+            task=task,
+            data_dir=data_dir,
+            filename_suffix="_desc-confounds_timeseries.tsv",
+            use_derivatives=True,
+        )
+
     data_list = []
 
-    for info in runs_info:
+    for i, info in enumerate(runs_info):
         session = info["session"]
         fmri_run = info["fmri_run"]
         func_dir = _get_fmriprep_func_dir(data_dir, subject_id, session)
@@ -255,6 +273,17 @@ def load_responses(
             data = img.get_fdata()
         else:
             raise ValueError(f"Unknown space: {space}. Expected 'fsaverage6' or 'T1w'")
+
+        # Clean data immediately to save memory
+        if clean:
+            if space == "T1w":
+                # Volume data: reshape (x,y,z,t) -> (t, n_voxels) for cleaning
+                orig_shape = data.shape
+                data = data.reshape(-1, orig_shape[-1]).T
+                data = clean_data(data, confounds_list[i])
+                data = data.T.reshape(orig_shape)
+            else:
+                data = clean_data(data, confounds_list[i])
 
         data_list.append(data)
 
