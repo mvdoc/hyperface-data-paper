@@ -154,25 +154,42 @@ def main():
 
     print_summary_stats(isc_data, subject_ids)
 
+    # Create figures directory
+    figures_dir = isc_qa_dir / "figures"
+    figures_dir.mkdir(exist_ok=True)
+
     print("\nCreating violin plot...")
-    violin_path = isc_qa_dir / "group_desc-isc_violinplot.png"
+    violin_path = figures_dir / "group_desc-isc_violinplot.png"
     create_isc_violin_plot(isc_data, subject_ids, violin_path)
 
-    # Create group median surface plot
-    print("\nCreating pycortex surface plot...")
+    # Determine plot type based on display availability
     display_available = has_display()
     plot_type = "inflated" if display_available else "flatmap"
     display_status = "available" if display_available else "not available"
-    print(f"Using {plot_type} visualization (DISPLAY={display_status})")
+    print(f"\nUsing {plot_type} visualization (DISPLAY={display_status})")
 
-    surface_path = isc_qa_dir / f"group_desc-isc_{plot_type}.png"
+    # Create individual subject surface plots
+    print("\nCreating individual subject surface plots...")
+    for subject_id, isc in zip(subject_ids, isc_data):
+        subject_path = figures_dir / f"{subject_id}_desc-isc_{plot_type}.png"
+        create_fsaverage6_plot(
+            isc,
+            subject_path,
+            freesurfer_subjects_dir=config.paths.freesurfer_dir,
+            title=subject_id.replace("sub-", ""),
+        )
+
+    # Create group median surface plot
+    print("\nCreating group median surface plot...")
+    surface_path = figures_dir / f"group_desc-isc_{plot_type}.png"
     create_fsaverage6_plot(
         group_median_isc,
         surface_path,
         freesurfer_subjects_dir=config.paths.freesurfer_dir,
+        title="Group Median",
     )
 
-    print(f"\nFigures saved to: {isc_qa_dir}")
+    print(f"\nFigures saved to: {figures_dir}")
     return 0
 
 

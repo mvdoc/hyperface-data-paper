@@ -146,6 +146,7 @@ def create_fsaverage6_plot(
     vmin: float = 0.0,
     vmax: float = 0.3,
     freesurfer_subjects_dir: Path | str | None = None,
+    title: str | None = None,
 ) -> None:
     """Create cortical surface plot of ISC or similar vertex data.
 
@@ -165,6 +166,8 @@ def create_fsaverage6_plot(
     freesurfer_subjects_dir : Path or str, optional
         Path to FreeSurfer subjects directory containing fsaverage.
         If None, uses $SUBJECTS_DIR environment variable.
+    title : str, optional
+        Title to display on the figure. If None, no title is added.
 
     Notes
     -----
@@ -191,6 +194,8 @@ def create_fsaverage6_plot(
             viewer_params=viewer_params,
             **params,
         )
+        if title:
+            fig.suptitle(title, fontsize=16, fontweight="bold", y=0.98)
         fig.savefig(output_path, dpi=300)
         plt.close(fig)
     else:
@@ -200,8 +205,10 @@ def create_fsaverage6_plot(
             with_rois=False,
             with_curvature=False,
             colorbar_location="right",
-            height=1024,
+            height=800,
         )
+        if title:
+            fig.suptitle(title, fontsize=16, fontweight="bold", y=0.98)
         fig.savefig(output_path, dpi=300, bbox_inches="tight")
         plt.close(fig)
 

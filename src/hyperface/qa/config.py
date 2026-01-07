@@ -68,7 +68,16 @@ class QAPaths:
             invalid structure.
         """
         if base_dir is None:
-            base_dir = Path.cwd()
+            # Try to find project root by looking for pyproject.toml
+            # Start from cwd and walk up
+            check_dir = Path.cwd()
+            while check_dir != check_dir.parent:
+                if (check_dir / "pyproject.toml").exists():
+                    base_dir = check_dir
+                    break
+                check_dir = check_dir.parent
+            else:
+                base_dir = Path.cwd()
 
         # Validate config structure
         if not isinstance(config, dict):
@@ -181,11 +190,15 @@ class QAConfig:
             If config file has invalid YAML syntax or is empty.
         """
         # Determine config file to load
+        # Also set config_file_dir for resolving relative paths
+        config_file_dir = None
+
         if config_path is not None:
-            cfg_path = Path(config_path)
+            cfg_path = Path(config_path).resolve()
             if not cfg_path.exists():
                 msg = f"Config file not found: {config_path}"
                 raise FileNotFoundError(msg)
+            config_file_dir = cfg_path.parent
             try:
                 with open(cfg_path) as f:
                     config = yaml.safe_load(f)
@@ -196,10 +209,11 @@ class QAConfig:
                     f"See hyperface/assets/qa_config.yaml for an example."
                 ) from e
         elif os.environ.get("HYPERFACE_QA_CONFIG"):
-            env_path = Path(os.environ["HYPERFACE_QA_CONFIG"])
+            env_path = Path(os.environ["HYPERFACE_QA_CONFIG"]).resolve()
             if not env_path.exists():
                 msg = f"Config file from HYPERFACE_QA_CONFIG not found: {env_path}"
                 raise FileNotFoundError(msg)
+            config_file_dir = env_path.parent
             try:
                 with open(env_path) as f:
                     config = yaml.safe_load(f)
@@ -237,8 +251,14 @@ class QAConfig:
         if data_dir is not None:
             config.setdefault("directories", {})["data_dir"] = data_dir
 
+        # Determine base_dir for path resolution:
+        # 1. Explicit base_dir argument takes priority
+        # 2. Config file's parent directory (for custom configs)
+        # 3. QAPaths.from_config will find pyproject.toml or use cwd
+        effective_base_dir = base_dir or config_file_dir
+
         # Build paths
-        paths = QAPaths.from_config(config, base_dir=base_dir)
+        paths = QAPaths.from_config(config, base_dir=effective_base_dir)
 
         return cls(
             paths=paths,
