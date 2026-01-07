@@ -3,7 +3,7 @@
 
 This script loads pre-computed ISC GIFTI files and creates:
 1. Violin plot showing ISC distribution across vertices for each subject
-2. (Future) pycortex surface visualizations
+2. Pycortex surface visualizations (flatmap or inflated views)
 
 Requires qa-save-isc.py to be run first.
 
@@ -20,6 +20,7 @@ import numpy as np
 import seaborn as sns
 
 from hyperface.qa import create_qa_argument_parser, get_config, style_violin_plot
+from hyperface.viz import create_fsaverage6_plot, has_display, start_webgl_viewer
 
 
 def load_isc_data(isc_dir: Path) -> tuple[list[np.ndarray], list[str]]:
@@ -122,6 +123,11 @@ def main():
         description="Generate ISC visualization plots",
         include_subjects=False,
     )
+    parser.add_argument(
+        "--webgl",
+        action="store_true",
+        help="Start interactive webgl viewer instead of generating plots",
+    )
     args = parser.parse_args()
 
     config = get_config(config_path=args.config, data_dir=args.data_dir)
@@ -136,11 +142,35 @@ def main():
     isc_data, subject_ids = load_isc_data(isc_qa_dir)
     print(f"Loaded ISC data for {len(subject_ids)} subjects")
 
+    group_median_isc = np.median(isc_data, axis=0)
+
+    # If --webgl, start interactive viewer and exit
+    if args.webgl:
+        start_webgl_viewer(
+            group_median_isc,
+            freesurfer_subjects_dir=config.paths.freesurfer_dir,
+        )
+        return 0
+
     print_summary_stats(isc_data, subject_ids)
 
     print("\nCreating violin plot...")
     violin_path = isc_qa_dir / "group_desc-isc_violinplot.png"
     create_isc_violin_plot(isc_data, subject_ids, violin_path)
+
+    # Create group median surface plot
+    print("\nCreating pycortex surface plot...")
+    display_available = has_display()
+    plot_type = "inflated" if display_available else "flatmap"
+    display_status = "available" if display_available else "not available"
+    print(f"Using {plot_type} visualization (DISPLAY={display_status})")
+
+    surface_path = isc_qa_dir / f"group_desc-isc_{plot_type}.png"
+    create_fsaverage6_plot(
+        group_median_isc,
+        surface_path,
+        freesurfer_subjects_dir=config.paths.freesurfer_dir,
+    )
 
     print(f"\nFigures saved to: {isc_qa_dir}")
     return 0

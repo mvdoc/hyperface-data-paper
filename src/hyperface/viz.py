@@ -1,8 +1,15 @@
 """Module containing viz utils"""
 
+import os
+import time
+from pathlib import Path
+
+import cortex
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+WEBGL_PORT = 8765
 
 
 def make_mosaic(data):
@@ -59,3 +66,185 @@ def plot_mosaic(mat, vmin=30, vmax=250, title=None):
     plt.colorbar(im, cax=cax)
     ax.axis("off")
     return fig
+
+
+def setup_pycortex_fsaverage(download_again: bool = False) -> None:
+    """Download fsaverage surface for pycortex if not present.
+
+    This function downloads the fsaverage subject data required by pycortex
+    for cortical surface visualizations. It should be called once before
+    any pycortex visualization functions.
+
+    Parameters
+    ----------
+    download_again : bool, default=False
+        If True, re-download even if already present.
+    """
+    cortex.utils.download_subject(subject_id="fsaverage", download_again=download_again)
+
+
+def has_display() -> bool:
+    """Check if a display is available for pycortex 3D rendering.
+
+    Returns
+    -------
+    bool
+        True if DISPLAY environment variable is set (X11 available),
+        False otherwise.
+    """
+    return bool(os.environ.get("DISPLAY"))
+
+
+def upsample_fsaverage6_to_fsaverage(
+    data: np.ndarray,
+    freesurfer_subjects_dir: Path | str | None = None,
+) -> np.ndarray:
+    """Upsample vertex data from fsaverage6 to fsaverage resolution.
+
+    Parameters
+    ----------
+    data : np.ndarray
+        Vertex data in fsaverage6 space. Can be 1D (n_vertices,) for single
+        map or 2D (n_maps, n_vertices) for multiple maps.
+        Expected: ~81,924 vertices (40,962 per hemisphere).
+    freesurfer_subjects_dir : Path or str, optional
+        Path to FreeSurfer subjects directory containing fsaverage.
+        If None, uses $SUBJECTS_DIR environment variable.
+
+    Returns
+    -------
+    np.ndarray
+        Upsampled data in fsaverage space (~327,684 vertices).
+    """
+    fs_dir = str(freesurfer_subjects_dir) if freesurfer_subjects_dir else None
+    return cortex.freesurfer.upsample_to_fsaverage(
+        data, "fsaverage6", freesurfer_subjects_dir=fs_dir
+    )
+
+
+def _prepare_fsaverage_vertex(
+    data: np.ndarray,
+    cmap: str,
+    vmin: float,
+    vmax: float,
+    freesurfer_subjects_dir: Path | str | None,
+) -> cortex.Vertex:
+    """Prepare a pycortex Vertex object from fsaverage6 data.
+
+    This helper handles the common setup needed for surface visualization:
+    ensures fsaverage is available, upsamples the data, and creates the Vertex.
+    """
+    setup_pycortex_fsaverage()
+    data_upsampled = upsample_fsaverage6_to_fsaverage(data, freesurfer_subjects_dir)
+    return cortex.Vertex(data_upsampled, "fsaverage", cmap=cmap, vmin=vmin, vmax=vmax)
+
+
+def create_fsaverage6_plot(
+    data: np.ndarray,
+    output_path: Path,
+    cmap: str = "hot",
+    vmin: float = 0.0,
+    vmax: float = 0.3,
+    freesurfer_subjects_dir: Path | str | None = None,
+) -> None:
+    """Create cortical surface plot of ISC or similar vertex data.
+
+    Parameters
+    ----------
+    data : np.ndarray
+        Vertex data in fsaverage6 space (will be upsampled to fsaverage).
+        Shape should be (n_vertices,) where n_vertices ~ 81,924.
+    output_path : Path
+        Output file path for the saved figure (PNG).
+    cmap : str, default="hot"
+        Matplotlib colormap name.
+    vmin : float, default=0.0
+        Minimum value for color scale.
+    vmax : float, default=0.3
+        Maximum value for color scale.
+    freesurfer_subjects_dir : Path or str, optional
+        Path to FreeSurfer subjects directory containing fsaverage.
+        If None, uses $SUBJECTS_DIR environment variable.
+
+    Notes
+    -----
+    - If DISPLAY is available: uses cortex.export.plot_panels() for
+      inflated lateral/medial/ventral views (requires WebGL).
+    - If no DISPLAY: uses cortex.quickflat.make_figure() for flatmap
+      visualization (matplotlib-only, no display required).
+    """
+    surface = _prepare_fsaverage_vertex(
+        data, cmap, vmin, vmax, freesurfer_subjects_dir
+    )
+
+    if has_display():
+        # Inflated 3D views (requires display/WebGL)
+        params = cortex.export.params_inflated_lateral_medial_ventral
+        windowsize = (3200, 1800)
+        viewer_params = {
+            "labels_visible": [],
+            "overlays_visible": [],
+        }
+        fig = cortex.export.plot_panels(
+            surface,
+            windowsize=windowsize,
+            viewer_params=viewer_params,
+            **params,
+        )
+        fig.savefig(output_path, dpi=300)
+        plt.close(fig)
+    else:
+        # Flatmap visualization (matplotlib, no display needed)
+        fig = cortex.quickflat.make_figure(
+            surface,
+            with_rois=False,
+            with_curvature=False,
+            colorbar_location="right",
+            height=1024,
+        )
+        fig.savefig(output_path, dpi=300, bbox_inches="tight")
+        plt.close(fig)
+
+    print(f"Saved surface plot to: {output_path}")
+
+
+def start_webgl_viewer(
+    data: np.ndarray,
+    cmap: str = "hot",
+    vmin: float = 0.0,
+    vmax: float = 0.3,
+    freesurfer_subjects_dir: Path | str | None = None,
+    port: int = WEBGL_PORT,
+    sleep_seconds: float = 3600,
+) -> None:
+    """Start an interactive pycortex webgl viewer for fsaverage6 data.
+
+    Parameters
+    ----------
+    data : np.ndarray
+        Vertex data in fsaverage6 space (will be upsampled to fsaverage).
+        Shape should be (n_vertices,) where n_vertices ~ 81,924.
+    cmap : str, default="hot"
+        Matplotlib colormap name.
+    vmin : float, default=0.0
+        Minimum value for color scale.
+    vmax : float, default=0.3
+        Maximum value for color scale.
+    freesurfer_subjects_dir : Path or str, optional
+        Path to FreeSurfer subjects directory containing fsaverage.
+        If None, uses $SUBJECTS_DIR environment variable.
+    port : int, default=8765
+        Port number for the webgl server.
+    sleep_seconds : float, default=3600
+        Time in seconds to keep the server running (default 1 hour).
+    """
+    surface = _prepare_fsaverage_vertex(
+        data, cmap, vmin, vmax, freesurfer_subjects_dir
+    )
+
+    print(f"Starting webgl viewer on port {port}...")
+    print(f"Access at: http://localhost:{port}")
+    print("Press Ctrl+C to stop the server.")
+
+    cortex.webgl.show(surface, open_browser=False, port=port)
+    time.sleep(sleep_seconds)
