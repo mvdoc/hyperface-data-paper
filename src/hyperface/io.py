@@ -23,6 +23,25 @@ def _normalize_data_dir(data_dir: Path | str | None) -> Path:
     return Path(data_dir)
 
 
+def save_gifti(data: np.ndarray, output_path: str | Path) -> None:
+    """Save 1D array as GIFTI func file.
+
+    Parameters
+    ----------
+    data : np.ndarray
+        1D array of vertex data to save
+    output_path : str or Path
+        Output path for the GIFTI file
+    """
+    darray = nib.gifti.GiftiDataArray(
+        data.astype(np.float32),
+        intent="NIFTI_INTENT_NONE",
+        datatype="NIFTI_TYPE_FLOAT32",
+    )
+    gii = nib.gifti.GiftiImage(darrays=[darray])
+    nib.save(gii, str(output_path))
+
+
 def normalize_subject_id(subject: str | int) -> str:
     """Normalize subject identifier to full BIDS format (sub-sidXXXXXX).
 

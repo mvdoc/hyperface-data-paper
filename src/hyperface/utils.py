@@ -1,10 +1,24 @@
 """Module containing utils"""
 import numpy as np
+import pandas as pd
 import scipy.linalg as la
 from numpy.polynomial.legendre import Legendre
 
 
-def compute_tsnr(data, confounds):
+def _compute_tsnr_from_2d(data: np.ndarray, confounds: pd.DataFrame) -> np.ndarray:
+    """Compute tSNR from 2D data array (n_timepoints, n_features).
+
+    This is the shared implementation used by both volume and surface tSNR
+    computation.
+    """
+    data_mean = data.mean(axis=0)
+    data_clean = clean_data(data, confounds)
+    std = data_clean.std(axis=0)
+    std[std < 1e-8] = 1
+    return data_mean / std
+
+
+def compute_tsnr(data: np.ndarray, confounds: pd.DataFrame) -> np.ndarray:
     """Compute tSNR on data by first regressing out the following nuisance
     regressors:
 
@@ -26,33 +40,43 @@ def compute_tsnr(data, confounds):
     tsnr : array of shape (dim1, dim2, dim3)
         temporal SNR array
     """
-    # reshape
     data = data.T
     orig_shape = data.shape
-    data = data.reshape(orig_shape[0], -1)
-    # store mean
-    data_mean = data.mean(0)
-    data_clean = clean_data(data, confounds)
-    # compute std
-    std = data_clean.std(0)
-    std[std < 1e-8] = 1
-    tsnr = data_mean / std
-    # reshape to the original shape
-    tsnr = tsnr.reshape(orig_shape[1:]).T
-    return tsnr
+    data_2d = data.reshape(orig_shape[0], -1)
+    tsnr = _compute_tsnr_from_2d(data_2d, confounds)
+    return tsnr.reshape(orig_shape[1:]).T
 
 
-def make_poly_regressors(n_samples, order=2):
-    # mean
-    X = np.ones((n_samples, 1))
-    for d in range(order):
-        poly = Legendre.basis(d + 1)
-        poly_trend = poly(np.linspace(-1, 1, n_samples))
-        X = np.hstack((X, poly_trend[:, None]))
-    return X
+def compute_tsnr_surface(data: np.ndarray, confounds: pd.DataFrame) -> np.ndarray:
+    """Compute tSNR for surface data.
+
+    Applies the same confound regression as compute_tsnr() but for 2D surface
+    time series data (e.g., from fsaverage6 GIFTI files).
+
+    Parameters
+    ----------
+    data : array of shape (n_timepoints, n_vertices)
+        Surface time series data from GIFTI
+    confounds : pandas DataFrame
+        Confounds DataFrame from fMRIprep
+
+    Returns
+    -------
+    tsnr : array of shape (n_vertices,)
+        tSNR per vertex
+    """
+    return _compute_tsnr_from_2d(data, confounds)
 
 
-def clean_data(data, confounds):
+def make_poly_regressors(n_samples: int, order: int = 2) -> np.ndarray:
+    """Create polynomial regressors using Legendre basis."""
+    x = np.linspace(-1, 1, n_samples)
+    columns = [np.ones(n_samples)]
+    columns.extend(Legendre.basis(d + 1)(x) for d in range(order))
+    return np.column_stack(columns)
+
+
+def clean_data(data: np.ndarray, confounds: pd.DataFrame) -> np.ndarray:
     """Clean data by regressing out the following nuisance regressors:
 
     - six motion parameters and their derivatives
@@ -73,8 +97,7 @@ def clean_data(data, confounds):
     data_clean : array of shape (n_volumes, n_features)
         denoised data
     """
-    # make predictor matrix using confounds computed by fmriprep
-    columns = [
+    confound_columns = [
         'global_signal',
         'framewise_displacement',
         'trans_x', 'trans_x_derivative1',
@@ -84,21 +107,13 @@ def clean_data(data, confounds):
         'rot_y', 'rot_y_derivative1',
         'rot_z', 'rot_z_derivative1',
     ]
-    # compcor
-    n_comp_cor = 6
-    columns += [f"a_comp_cor_{c:02d}" for c in range(n_comp_cor)]
-    X = confounds[columns].values
-    # remove nans
-    X[np.isnan(X)] = 0.
-    # add polynomial components
-    n_samples = X.shape[0]
-    X = np.hstack((X, make_poly_regressors(n_samples, order=2)))
+    confound_columns += [f"a_comp_cor_{c:02d}" for c in range(6)]
 
-    # time to clean up
-    # center the data first and store the mean
+    X = confounds[confound_columns].values.copy()
+    X[np.isnan(X)] = 0.0
+    X = np.hstack((X, make_poly_regressors(X.shape[0])))
+
     data_mean = data.mean(0)
-    data = data - data_mean
-    coef, _, _, _ = la.lstsq(X, data)
-    # remove trends and add back mean of the data
-    data_clean = data - X.dot(coef) + data_mean
-    return data_clean
+    data_centered = data - data_mean
+    coef = la.lstsq(X, data_centered)[0]
+    return data_centered - X @ coef + data_mean
