@@ -69,3 +69,6 @@ Thumbs.db
 
 # Private stuff like freesurfer license
 private
+
+# NFS hanging stuff
+.nfs*
