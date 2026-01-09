@@ -6,8 +6,8 @@ from typing import Any
 # Style presets
 VIOLIN_STYLES = {
     "default": {
-        "facecolor": "lightblue",
-        "edgecolor": "navy",
+        "facecolor": "steelblue",
+        "edgecolor": "darkslategray",
         "alpha": 0.7,
     },
     "fd": {
@@ -16,8 +16,8 @@ VIOLIN_STYLES = {
         "alpha": 0.7,
     },
     "isc": {
-        "facecolor": "lightblue",
-        "edgecolor": "navy",
+        "facecolor": "steelblue",
+        "edgecolor": "darkslategray",
         "alpha": 0.7,
     },
 }

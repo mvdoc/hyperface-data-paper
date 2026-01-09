@@ -22,10 +22,12 @@ import seaborn as sns
 from tqdm import tqdm
 
 from hyperface.qa import (
+    collect_confounds_by_task,
     create_qa_argument_parser,
     discover_sessions,
     discover_subjects,
     get_config,
+    get_motion_outlier_counts,
     parse_bids_filename,
     style_violin_plot,
 )
@@ -54,8 +56,12 @@ def load_motion_data(confounds_file: str) -> pd.DataFrame:
     """
     df = pd.read_csv(confounds_file, sep="\t")
     motion_cols = [
-        "trans_x", "trans_y", "trans_z",
-        "rot_x", "rot_y", "rot_z",
+        "trans_x",
+        "trans_y",
+        "trans_z",
+        "rot_x",
+        "rot_y",
+        "rot_z",
         "framewise_displacement",
     ]
     available_cols = [col for col in motion_cols if col in df.columns]
@@ -176,9 +182,13 @@ def create_fd_trace_plots(
             f">0.5mm: {fd_above_thresh} TRs"
         )
         ax.text(
-            0.02, 0.98, stats_text, transform=ax.transAxes,
+            0.02,
+            0.98,
+            stats_text,
+            transform=ax.transAxes,
             bbox={"boxstyle": "round", "facecolor": "wheat", "alpha": 0.8},
-            verticalalignment="top", fontsize=10,
+            verticalalignment="top",
+            fontsize=10,
         )
 
         plt.tight_layout()
@@ -227,12 +237,14 @@ def create_fd_violin_plots_by_session(
             parts = parse_bids_filename(confounds_file)
             run_num = int(parts.run.lstrip("0") or "0") if parts.run else 0
 
-            run_info.append({
-                "data": fd_data,
-                "run_num": run_num,
-                "task": parts.task or "unknown",
-                "run_str": parts.run or "01",
-            })
+            run_info.append(
+                {
+                    "data": fd_data,
+                    "run_num": run_num,
+                    "task": parts.task or "unknown",
+                    "run_str": parts.run or "01",
+                }
+            )
 
         if not run_info:
             print(f"    Warning: No valid FD data for session {session}")
@@ -266,16 +278,17 @@ def create_fd_violin_plots_by_session(
         ax.axhline(0.5, color="red", linestyle="--", alpha=0.7, label="0.5mm threshold")
 
         ax.set_xticks(positions)
-        ax.set_xticklabels(run_labels, fontsize=10, rotation=45, ha="right")
-        ax.set_ylabel("Framewise Displacement (mm)", fontsize=12)
+        ax.set_xticklabels(run_labels, fontsize=14, rotation=45, ha="right")
+        ax.tick_params(axis="y", labelsize=14)
+        ax.set_ylabel("Framewise Displacement (mm)", fontsize=16)
 
         title = subject
         if session:
             title += f" - {session}"
         title += " - FD Distribution"
-        ax.set_title(title, fontsize=14, pad=20)
+        ax.set_title(title, fontsize=18, pad=20)
 
-        ax.grid(True, axis="y", alpha=0.3)
+        ax.grid(True, axis="y", alpha=0.5)
         ax.legend()
 
         sns.despine()
@@ -341,64 +354,118 @@ def process_subject(subject: str, fmriprep_dir: Path, motion_qa_dir: Path) -> No
         )
 
 
-def create_group_fd_violin_plot(
-    motion_qa_dir: Path, fmriprep_dir: Path, subjects: list[str]
+def create_group_fd_violin_plots_by_task(
+    fmriprep_dir: Path, subjects: list[str], figures_dir: Path
 ) -> None:
-    """Create group-level FD violin plot across all subjects."""
-    print("Creating group-level FD violin plot...")
+    """Create group-level FD violin plots split by task."""
+    print("\nCreating group-level FD violin plots by task...")
 
-    subject_fd_data = []
-    subject_labels = []
+    task_files = collect_confounds_by_task(fmriprep_dir, subjects)
 
-    for subject in subjects:
-        subject_fmriprep = fmriprep_dir / subject
-        pattern = "**/func/*_desc-confounds_timeseries.tsv"
-        confounds_files = list(subject_fmriprep.glob(pattern))
+    for task, subject_files in task_files.items():
+        subject_labels = []
+        subject_fd_data = []
 
-        if not confounds_files:
+        for subject, confounds_files in subject_files.items():
+            fd_values: list[float] = []
+            for confounds_file in confounds_files:
+                try:
+                    motion_data = load_motion_data(str(confounds_file))
+                except (FileNotFoundError, ValueError):
+                    continue
+                if "framewise_displacement" in motion_data.columns:
+                    fd_values.extend(
+                        motion_data["framewise_displacement"].fillna(0).values
+                    )
+
+            if fd_values:
+                subject_labels.append(subject)
+                subject_fd_data.append(fd_values)
+
+        if not subject_fd_data:
             continue
 
-        all_fd_data = []
-        for confounds_file in confounds_files:
-            try:
-                motion_data = load_motion_data(str(confounds_file))
-            except (FileNotFoundError, ValueError):
-                continue
-            if "framewise_displacement" in motion_data.columns:
-                fd_data = motion_data["framewise_displacement"].fillna(0).values
-                all_fd_data.extend(fd_data)
+        # Clip extreme outliers at 99th percentile
+        all_fd = np.concatenate(subject_fd_data)
+        clip_threshold = np.percentile(all_fd, 99)
+        clipped_data = [np.clip(fd, 0, clip_threshold) for fd in subject_fd_data]
 
-        if all_fd_data:
-            subject_fd_data.append(all_fd_data)
-            subject_labels.append(subject)
+        fig, ax = plt.subplots(1, 1, figsize=(max(12, len(clipped_data) * 0.8), 6))
+        positions = list(range(len(clipped_data)))
 
-    if not subject_fd_data:
-        print("  No FD data found for group plot")
-        return
+        violin_parts = ax.violinplot(
+            clipped_data, positions=positions, showmedians=True
+        )
+        style_violin_plot(violin_parts, style="fd")
 
-    fig, ax = plt.subplots(1, 1, figsize=(max(12, len(subject_fd_data) * 0.8), 6))
-    positions = list(range(len(subject_fd_data)))
+        ax.axhline(0.5, color="red", linestyle="--", alpha=0.7)
+        ax.set_xticks(positions)
+        ax.set_xticklabels(subject_labels, fontsize=14, rotation=45, ha="right")
+        ax.tick_params(axis="y", labelsize=14)
+        ax.set_ylabel("Framewise Displacement (mm)", fontsize=16)
+        ax.set_title(f"Group FD - task-{task}", fontsize=18)
+        ax.grid(True, axis="y", alpha=0.5)
 
-    parts = ax.violinplot(subject_fd_data, positions=positions, showmedians=True)
-    style_violin_plot(parts, style="default")
+        sns.despine()
+        plt.tight_layout()
 
-    ax.axhline(0.5, color="red", linestyle="--", alpha=0.7, label="0.5mm threshold")
+        output_path = figures_dir / f"group_task-{task}_desc-fd_violinplot.png"
+        fig.savefig(output_path, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        print(f"  Saved: {output_path.name}")
 
-    ax.set_xticks(positions)
-    ax.set_xticklabels(subject_labels, fontsize=10, rotation=45, ha="right")
-    ax.set_ylabel("Framewise Displacement (mm)", fontsize=12)
-    ax.set_title("Group FD Distribution Across All Subjects", fontsize=14)
 
-    ax.grid(True, axis="y", alpha=0.3)
-    ax.legend()
+def create_group_motion_outlier_plots_by_task(
+    fmriprep_dir: Path, subjects: list[str], figures_dir: Path
+) -> None:
+    """Create group-level motion outlier percentage bar plots split by task."""
+    print("\nCreating group-level motion outlier plots by task...")
 
-    sns.despine()
-    plt.tight_layout()
+    task_files = collect_confounds_by_task(fmriprep_dir, subjects)
 
-    output_path = motion_qa_dir / "group_desc-fd_violinplot.png"
-    fig.savefig(output_path, dpi=150, bbox_inches="tight")
-    plt.close(fig)
-    print("  Saved: group_desc-fd_violinplot.png")
+    for task, subject_files in task_files.items():
+        subject_labels = []
+        percentages = []
+
+        for subject, confounds_files in subject_files.items():
+            total_outliers = 0
+            total_timepoints = 0
+
+            for confounds_file in confounds_files:
+                try:
+                    n_outliers, n_timepoints = get_motion_outlier_counts(
+                        str(confounds_file)
+                    )
+                    total_outliers += n_outliers
+                    total_timepoints += n_timepoints
+                except (FileNotFoundError, ValueError):
+                    continue
+
+            if total_timepoints > 0:
+                subject_labels.append(subject)
+                percentages.append((total_outliers / total_timepoints) * 100)
+
+        if not percentages:
+            continue
+
+        fig, ax = plt.subplots(1, 1, figsize=(max(12, len(percentages) * 0.8), 6))
+        positions = list(range(len(percentages)))
+
+        ax.bar(positions, percentages, color="steelblue", edgecolor="darkslategray")
+        ax.set_xticks(positions)
+        ax.set_xticklabels(subject_labels, fontsize=14, rotation=45, ha="right")
+        ax.tick_params(axis="y", labelsize=14)
+        ax.set_ylabel("Motion Outliers (%)", fontsize=16)
+        ax.set_title(f"Group Motion Outliers - task-{task}", fontsize=18)
+        ax.grid(True, axis="y", alpha=0.5)
+
+        sns.despine()
+        plt.tight_layout()
+
+        output_path = figures_dir / f"group_task-{task}_desc-motionoutliers_barplot.png"
+        fig.savefig(output_path, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        print(f"  Saved: {output_path.name}")
 
 
 def main():
@@ -437,14 +504,20 @@ def main():
             print(f"Data error for {subject}: {e}")
             continue
 
+    # Create group-level figures directory
+    figures_dir = motion_qa_dir / "figures"
+    figures_dir.mkdir(parents=True, exist_ok=True)
+
     try:
-        create_group_fd_violin_plot(motion_qa_dir, fmriprep_dir, subjects)
+        create_group_fd_violin_plots_by_task(fmriprep_dir, subjects, figures_dir)
+        create_group_motion_outlier_plots_by_task(fmriprep_dir, subjects, figures_dir)
     except (FileNotFoundError, ValueError) as e:
-        print(f"Warning: Could not create group plot: {e}")
+        print(f"Warning: Could not create group plots: {e}")
         print("Individual subject plots were still generated successfully.")
 
     print(f"\nCompleted processing {len(subjects)} subjects")
-    print(f"Figures saved to: {motion_qa_dir}/*/figures/")
+    print(f"Subject figures saved to: {motion_qa_dir}/*/figures/")
+    print(f"Group figures saved to: {figures_dir}/")
 
     return 0
 

@@ -281,11 +281,12 @@ def create_violin_plots_by_task(
         style_violin_plot(violin_parts, style="default")
 
         ax.set_xticks(positions)
-        ax.set_xticklabels(run_labels, fontsize=10, rotation=45, ha="right")
-        ax.set_ylabel("tSNR", fontsize=12)
+        ax.set_xticklabels(run_labels, fontsize=14, rotation=45, ha="right")
+        ax.tick_params(axis="y", labelsize=14)
+        ax.set_ylabel("tSNR", fontsize=16)
         title = f"{subject} - task-{task} - tSNR Distribution"
-        ax.set_title(title, fontsize=14, pad=20)
-        ax.grid(True, axis="y", alpha=0.3)
+        ax.set_title(title, fontsize=18, pad=20)
+        ax.grid(True, axis="y", alpha=0.5)
         sns.despine()
 
         subj_id = strip_bids_prefix(subject, "sub")
@@ -377,10 +378,11 @@ def create_group_volume_plots_by_task(
         style_violin_plot(violin_parts, style="default")
 
         ax.set_xticks(positions)
-        ax.set_xticklabels(subject_labels, fontsize=10, rotation=45, ha="right")
-        ax.set_ylabel("tSNR", fontsize=12)
-        ax.set_title(f"Group tSNR - task-{task}", fontsize=14, pad=20)
-        ax.grid(True, axis="y", alpha=0.3)
+        ax.set_xticklabels(subject_labels, fontsize=14, rotation=45, ha="right")
+        ax.tick_params(axis="y", labelsize=14)
+        ax.set_ylabel("tSNR", fontsize=16)
+        ax.set_title(f"Group tSNR - task-{task}", fontsize=18, pad=20)
+        ax.grid(True, axis="y", alpha=0.5)
         sns.despine()
 
         output_path = figures_dir / f"group_task-{task}_desc-tsnr_violinplot.png"
