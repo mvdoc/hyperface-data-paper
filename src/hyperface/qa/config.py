@@ -43,9 +43,7 @@ class QAPaths:
     isc_dir: Path
 
     @classmethod
-    def from_config(
-        cls, config: dict, base_dir: Path | None = None
-    ) -> "QAPaths":
+    def from_config(cls, config: dict, base_dir: Path | None = None) -> "QAPaths":
         """Create QAPaths from config dictionary.
 
         Parameters

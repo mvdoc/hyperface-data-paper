@@ -42,8 +42,8 @@ class BIDSComponents:
             value = getattr(self, key, None)
             if value is not None:
                 # Use standard BIDS key prefixes
-                prefix = "sub" if key == "subject" else (
-                    "ses" if key == "session" else key
+                prefix = (
+                    "sub" if key == "subject" else ("ses" if key == "session" else key)
                 )
                 parts.append(f"{prefix}-{value}")
 
@@ -90,8 +90,15 @@ def parse_bids_filename(filepath: str | Path) -> BIDSComponents:
     # Handle extensions (including compound like .nii.gz)
     extension = ""
     known_extensions = [
-        ".nii.gz", ".func.gii", ".surf.gii", ".tsv", ".json",
-        ".nii", ".gii", ".png", ".html",
+        ".nii.gz",
+        ".func.gii",
+        ".surf.gii",
+        ".tsv",
+        ".json",
+        ".nii",
+        ".gii",
+        ".png",
+        ".html",
     ]
     for ext in known_extensions:
         if basename.endswith(ext):
@@ -245,7 +252,8 @@ def discover_subjects(
 
         if not found and subjects:
             available = sorted(
-                d.name for d in base_dir.iterdir()
+                d.name
+                for d in base_dir.iterdir()
                 if d.is_dir() and d.name.startswith(prefix)
             )[:5]
             raise FileNotFoundError(
@@ -257,8 +265,7 @@ def discover_subjects(
         return found
 
     return sorted(
-        d.name for d in base_dir.iterdir()
-        if d.is_dir() and d.name.startswith(prefix)
+        d.name for d in base_dir.iterdir() if d.is_dir() and d.name.startswith(prefix)
     )
 
 
@@ -300,6 +307,7 @@ def discover_sessions(
         return found
 
     return sorted(
-        d.name for d in subject_dir.iterdir()
+        d.name
+        for d in subject_dir.iterdir()
         if d.is_dir() and d.name.startswith(prefix)
     )
