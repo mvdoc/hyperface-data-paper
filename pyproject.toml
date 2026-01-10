@@ -47,6 +47,7 @@ dependencies = [
     "pybids>=0.16.0",
     "pycortex>=1.0.0",
     "pytest>=8.4.2",
+    "pydeface>=2.0.2",
 ]
 
 [project.optional-dependencies]
