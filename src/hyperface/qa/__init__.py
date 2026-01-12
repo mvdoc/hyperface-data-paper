@@ -26,7 +26,11 @@ from hyperface.qa.config import (
     create_qa_argument_parser,
     get_config,
 )
-from hyperface.qa.motion import collect_confounds_by_task, get_motion_outlier_counts
+from hyperface.qa.motion import (
+    collect_confounds_by_task,
+    get_fd_outlier_counts,
+    get_motion_outlier_counts,
+)
 from hyperface.qa.plotting import style_violin_plot
 
 __all__ = [
@@ -41,5 +45,6 @@ __all__ = [
     "discover_sessions",
     "style_violin_plot",
     "get_motion_outlier_counts",
+    "get_fd_outlier_counts",
     "collect_confounds_by_task",
 ]

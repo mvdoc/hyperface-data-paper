@@ -7,7 +7,11 @@ motion QA pipeline.
 import pandas as pd
 import pytest
 
-from hyperface.qa import collect_confounds_by_task, get_motion_outlier_counts
+from hyperface.qa import (
+    collect_confounds_by_task,
+    get_fd_outlier_counts,
+    get_motion_outlier_counts,
+)
 
 # =============================================================================
 # Fixtures
@@ -103,6 +107,74 @@ class TestGetMotionOutlierCounts:
         n_outliers, n_timepoints = get_motion_outlier_counts(path)
         assert n_outliers == 2, "Should only count motion_outlier* columns"
         assert n_timepoints == 75
+
+
+# =============================================================================
+# Tests for get_fd_outlier_counts
+# =============================================================================
+
+
+@pytest.fixture
+def temp_fd_confounds_file(tmp_path):
+    """Create a temporary confounds TSV file with specified FD values."""
+
+    def _create(fd_values: list[float]):
+        df = pd.DataFrame({"framewise_displacement": fd_values})
+        path = tmp_path / "confounds_fd.tsv"
+        df.to_csv(path, sep="\t", index=False)
+        return str(path)
+
+    return _create
+
+
+class TestGetFdOutlierCounts:
+    """Tests for the get_fd_outlier_counts function."""
+
+    def test_no_outliers(self, temp_fd_confounds_file):
+        """Test with all FD values below threshold."""
+        path = temp_fd_confounds_file([0.1, 0.2, 0.3, 0.4, 0.49])
+        n_outliers, n_timepoints = get_fd_outlier_counts(path, fd_threshold=0.5)
+        assert n_outliers == 0, "No FD values should exceed 0.5mm"
+        assert n_timepoints == 5
+
+    def test_all_outliers(self, temp_fd_confounds_file):
+        """Test with all FD values above threshold."""
+        path = temp_fd_confounds_file([0.6, 0.7, 0.8, 0.9, 1.0])
+        n_outliers, n_timepoints = get_fd_outlier_counts(path, fd_threshold=0.5)
+        assert n_outliers == 5, "All FD values should exceed 0.5mm"
+        assert n_timepoints == 5
+
+    def test_some_outliers(self, temp_fd_confounds_file):
+        """Test with mixed FD values."""
+        path = temp_fd_confounds_file([0.1, 0.3, 0.5, 0.6, 0.8, 0.2])
+        n_outliers, n_timepoints = get_fd_outlier_counts(path, fd_threshold=0.5)
+        assert n_outliers == 2, "Only FD > 0.5mm should be counted (0.6, 0.8)"
+        assert n_timepoints == 6
+
+    def test_custom_threshold(self, temp_fd_confounds_file):
+        """Test with custom FD threshold."""
+        path = temp_fd_confounds_file([0.1, 0.2, 0.3, 0.4, 0.5])
+        n_outliers, n_timepoints = get_fd_outlier_counts(path, fd_threshold=0.2)
+        assert n_outliers == 3, "FD > 0.2mm: 0.3, 0.4, 0.5"
+        assert n_timepoints == 5
+
+    def test_boundary_value(self, temp_fd_confounds_file):
+        """Test that exactly threshold value is NOT counted as outlier."""
+        path = temp_fd_confounds_file([0.5, 0.5, 0.5])
+        n_outliers, n_timepoints = get_fd_outlier_counts(path, fd_threshold=0.5)
+        assert n_outliers == 0, "FD = 0.5mm should not be counted (only > 0.5)"
+        assert n_timepoints == 3
+
+    def test_nan_handling(self, tmp_path):
+        """Test that NaN values in FD are treated as 0 (not outliers)."""
+        import numpy as np
+
+        df = pd.DataFrame({"framewise_displacement": [np.nan, 0.6, np.nan, 0.7]})
+        path = tmp_path / "confounds_nan.tsv"
+        df.to_csv(path, sep="\t", index=False)
+        n_outliers, n_timepoints = get_fd_outlier_counts(str(path), fd_threshold=0.5)
+        assert n_outliers == 2, "NaN values should be treated as 0, not outliers"
+        assert n_timepoints == 4
 
 
 # =============================================================================

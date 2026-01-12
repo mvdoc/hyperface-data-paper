@@ -11,6 +11,9 @@ from hyperface.qa.bids import parse_bids_filename
 def get_motion_outlier_counts(confounds_file: str) -> tuple[int, int]:
     """Get motion outlier count and total timepoints from confounds file.
 
+    Note: fMRIprep flags motion outliers using a joint criterion:
+    FD > 0.5mm OR standardized DVARS > 1.5.
+
     Parameters
     ----------
     confounds_file : str
@@ -24,6 +27,29 @@ def get_motion_outlier_counts(confounds_file: str) -> tuple[int, int]:
     df = pd.read_csv(confounds_file, sep="\t")
     outlier_cols = [c for c in df.columns if c.startswith("motion_outlier")]
     return len(outlier_cols), len(df)
+
+
+def get_fd_outlier_counts(
+    confounds_file: str, fd_threshold: float = 0.5
+) -> tuple[int, int]:
+    """Count timepoints where FD exceeds threshold.
+
+    Parameters
+    ----------
+    confounds_file : str
+        Path to fMRIprep confounds TSV file.
+    fd_threshold : float
+        FD threshold in mm (default 0.5mm).
+
+    Returns
+    -------
+    tuple[int, int]
+        Number of FD outliers and total timepoints.
+    """
+    df = pd.read_csv(confounds_file, sep="\t")
+    fd = df["framewise_displacement"].fillna(0)
+    n_outliers = int((fd > fd_threshold).sum())
+    return n_outliers, len(df)
 
 
 def collect_confounds_by_task(

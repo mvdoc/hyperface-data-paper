@@ -20,6 +20,10 @@ directories:
     tsnr: "tsnr"
     motion: "motion"
     isc: "isc"
+    stimuli: "stimuli"
+
+  # Stimuli labels directory (under derivatives_dir)
+  stimuli_labels: "stimuli/labels"
 
 # Default processing parameters
 defaults:

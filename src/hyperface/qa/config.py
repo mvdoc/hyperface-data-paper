@@ -31,6 +31,10 @@ class QAPaths:
         Motion analysis output directory.
     isc_dir : Path
         Inter-subject correlation output directory.
+    stimuli_dir : Path
+        Stimuli QA output directory.
+    stimuli_labels_dir : Path
+        Stimuli labels input directory.
     """
 
     data_dir: Path
@@ -41,6 +45,8 @@ class QAPaths:
     tsnr_dir: Path
     motion_dir: Path
     isc_dir: Path
+    stimuli_dir: Path
+    stimuli_labels_dir: Path
 
     @classmethod
     def from_config(cls, config: dict, base_dir: Path | None = None) -> "QAPaths":
@@ -114,10 +120,15 @@ class QAPaths:
             tsnr_subdir = qa_config.get("tsnr", "tsnr")
             motion_subdir = qa_config.get("motion", "motion")
             isc_subdir = qa_config.get("isc", "isc")
+            stimuli_subdir = qa_config.get("stimuli", "stimuli")
         else:
             tsnr_subdir = "tsnr"
             motion_subdir = "motion"
             isc_subdir = "isc"
+            stimuli_subdir = "stimuli"
+
+        # Stimuli labels directory (input)
+        stimuli_labels_subdir = dirs.get("stimuli_labels", "stimuli/labels")
 
         return cls(
             data_dir=data_dir.resolve(),
@@ -128,6 +139,8 @@ class QAPaths:
             tsnr_dir=(qa_base_dir / tsnr_subdir).resolve(),
             motion_dir=(qa_base_dir / motion_subdir).resolve(),
             isc_dir=(qa_base_dir / isc_subdir).resolve(),
+            stimuli_dir=(qa_base_dir / stimuli_subdir).resolve(),
+            stimuli_labels_dir=(derivatives_dir / stimuli_labels_subdir).resolve(),
         )
 
 

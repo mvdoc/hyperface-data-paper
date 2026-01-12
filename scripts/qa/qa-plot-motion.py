@@ -27,6 +27,7 @@ from hyperface.qa import (
     discover_sessions,
     discover_subjects,
     get_config,
+    get_fd_outlier_counts,
     get_motion_outlier_counts,
     parse_bids_filename,
     style_violin_plot,
@@ -365,12 +366,21 @@ def create_group_fd_violin_plots_by_task(
     for task, subject_files in task_files.items():
         subject_labels = []
         subject_fd_data = []
+        outlier_percentages = []
 
         for subject, confounds_files in subject_files.items():
             fd_values: list[float] = []
+            total_outliers = 0
+            total_timepoints = 0
+
             for confounds_file in confounds_files:
                 try:
                     motion_data = load_motion_data(str(confounds_file))
+                    n_outliers, n_timepoints = get_fd_outlier_counts(
+                        str(confounds_file)
+                    )
+                    total_outliers += n_outliers
+                    total_timepoints += n_timepoints
                 except (FileNotFoundError, ValueError):
                     continue
                 if "framewise_displacement" in motion_data.columns:
@@ -381,30 +391,80 @@ def create_group_fd_violin_plots_by_task(
             if fd_values:
                 subject_labels.append(subject)
                 subject_fd_data.append(fd_values)
+                pct = (total_outliers / total_timepoints * 100) if total_timepoints > 0 else 0
+                outlier_percentages.append(pct)
 
         if not subject_fd_data:
             continue
 
-        # Clip extreme outliers at 99th percentile
-        all_fd = np.concatenate(subject_fd_data)
-        clip_threshold = np.percentile(all_fd, 99)
-        clipped_data = [np.clip(fd, 0, clip_threshold) for fd in subject_fd_data]
+        # Separate main distribution (<=0.5mm) from high-motion points (>0.5mm)
+        outlier_threshold = 0.5  # mm, matches motion censoring threshold
+        main_data = []
+        outlier_values = []
+        outlier_positions = []
 
-        fig, ax = plt.subplots(1, 1, figsize=(max(12, len(clipped_data) * 0.8), 6))
-        positions = list(range(len(clipped_data)))
+        for i, fd in enumerate(subject_fd_data):
+            fd_array = np.array(fd)
+            mask = fd_array <= outlier_threshold
+            main_data.append(fd_array[mask])
+            outliers = fd_array[~mask]
+            if len(outliers) > 0:
+                outlier_values.extend(outliers)
+                outlier_positions.extend([i] * len(outliers))
+
+        fig, ax = plt.subplots(1, 1, figsize=(max(12, len(main_data) * 0.8), 6))
+        positions = list(range(len(main_data)))
 
         violin_parts = ax.violinplot(
-            clipped_data, positions=positions, showmedians=True
+            main_data, positions=positions, showmedians=True
         )
         style_violin_plot(violin_parts, style="fd")
 
+        # Add high-motion points as individual scatter markers
+        if outlier_values:
+            rng = np.random.default_rng(seed=42)
+            jittered_positions = [
+                p + rng.uniform(-0.15, 0.15) for p in outlier_positions
+            ]
+            ax.scatter(
+                jittered_positions,
+                outlier_values,
+                c="red",
+                alpha=0.4,
+                s=15,
+                marker="o",
+                label="High motion (>0.5mm)",
+            )
+
         ax.axhline(0.5, color="red", linestyle="--", alpha=0.7)
+
+        # Set y-axis to accommodate all data and labels
+        if outlier_values:
+            y_max = max(outlier_values) * 1.15
+        else:
+            y_max = 1.0
+        ax.set_ylim(0, y_max)
+
+        # Add FD outlier percentage labels above each violin (same y-line)
+        # y_label_pos = y_max * 0.92
+        # for i, pct in enumerate(outlier_percentages):
+        #     ax.text(
+        #         positions[i],
+        #         y_label_pos,
+        #         f"{pct:.1f}%",
+        #         ha="center",
+        #         va="top",
+        #         fontsize=16,
+        #     )
+
         ax.set_xticks(positions)
         ax.set_xticklabels(subject_labels, fontsize=14, rotation=45, ha="right")
         ax.tick_params(axis="y", labelsize=14)
         ax.set_ylabel("Framewise Displacement (mm)", fontsize=16)
         ax.set_title(f"Group FD - task-{task}", fontsize=18)
         ax.grid(True, axis="y", alpha=0.5)
+        if outlier_values:
+            ax.legend(loc="upper right")
 
         sns.despine()
         plt.tight_layout()
@@ -418,8 +478,11 @@ def create_group_fd_violin_plots_by_task(
 def create_group_motion_outlier_plots_by_task(
     fmriprep_dir: Path, subjects: list[str], figures_dir: Path
 ) -> None:
-    """Create group-level motion outlier percentage bar plots split by task."""
-    print("\nCreating group-level motion outlier plots by task...")
+    """Create group-level fMRIprep outlier percentage bar plots split by task.
+
+    Note: fMRIprep flags outliers using a joint criterion: FD > 0.5mm OR DVARS > 1.5.
+    """
+    print("\nCreating group-level fMRIprep outlier plots by task...")
 
     task_files = collect_confounds_by_task(fmriprep_dir, subjects)
 
@@ -455,8 +518,8 @@ def create_group_motion_outlier_plots_by_task(
         ax.set_xticks(positions)
         ax.set_xticklabels(subject_labels, fontsize=14, rotation=45, ha="right")
         ax.tick_params(axis="y", labelsize=14)
-        ax.set_ylabel("Motion Outliers (%)", fontsize=16)
-        ax.set_title(f"Group Motion Outliers - task-{task}", fontsize=18)
+        ax.set_ylabel("fMRIprep Outliers (%, FD|DVARS)", fontsize=16)
+        ax.set_title(f"Group fMRIprep Outliers - task-{task}", fontsize=18)
         ax.grid(True, axis="y", alpha=0.5)
 
         sns.despine()
@@ -468,10 +531,86 @@ def create_group_motion_outlier_plots_by_task(
         print(f"  Saved: {output_path.name}")
 
 
+def create_group_fd_outlier_plots_by_task(
+    fmriprep_dir: Path,
+    subjects: list[str],
+    figures_dir: Path,
+    fd_threshold: float = 0.5,
+) -> None:
+    """Create group-level FD outlier percentage bar plots split by task.
+
+    This counts timepoints where FD exceeds the threshold, providing a
+    motion-only metric (unlike fMRIprep outliers which also include DVARS).
+
+    Parameters
+    ----------
+    fmriprep_dir : Path
+        Path to fMRIprep derivatives directory.
+    subjects : list[str]
+        List of subject IDs to process.
+    figures_dir : Path
+        Output directory for figures.
+    fd_threshold : float
+        FD threshold in mm (default 0.5mm).
+    """
+    print("\nCreating group-level FD outlier plots by task...")
+
+    task_files = collect_confounds_by_task(fmriprep_dir, subjects)
+
+    for task, subject_files in task_files.items():
+        subject_labels = []
+        percentages = []
+
+        for subject, confounds_files in subject_files.items():
+            total_outliers = 0
+            total_timepoints = 0
+
+            for confounds_file in confounds_files:
+                try:
+                    n_outliers, n_timepoints = get_fd_outlier_counts(
+                        str(confounds_file), fd_threshold=fd_threshold
+                    )
+                    total_outliers += n_outliers
+                    total_timepoints += n_timepoints
+                except (FileNotFoundError, ValueError):
+                    continue
+
+            if total_timepoints > 0:
+                subject_labels.append(subject)
+                percentages.append((total_outliers / total_timepoints) * 100)
+
+        if not percentages:
+            continue
+
+        fig, ax = plt.subplots(1, 1, figsize=(max(12, len(percentages) * 0.8), 6))
+        positions = list(range(len(percentages)))
+
+        ax.bar(positions, percentages, color="coral", edgecolor="darkred")
+        ax.set_xticks(positions)
+        ax.set_xticklabels(subject_labels, fontsize=14, rotation=45, ha="right")
+        ax.tick_params(axis="y", labelsize=14)
+        ax.set_ylabel("FD Outliers (%)", fontsize=16)
+        ax.set_title(f"Group FD Outliers (>{fd_threshold}mm) - task-{task}", fontsize=18)
+        ax.grid(True, axis="y", alpha=0.5)
+
+        sns.despine()
+        plt.tight_layout()
+
+        output_path = figures_dir / f"group_task-{task}_desc-fdoutliers_barplot.png"
+        fig.savefig(output_path, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        print(f"  Saved: {output_path.name}")
+
+
 def main():
     parser = create_qa_argument_parser(
         description="Generate QA plots for motion data",
         include_subjects=True,
+    )
+    parser.add_argument(
+        "--group-only",
+        action="store_true",
+        help="Only generate group-level plots, skip per-subject plots",
     )
     args = parser.parse_args()
 
@@ -494,15 +633,16 @@ def main():
 
     print(f"Found {len(subjects)} subjects: {', '.join(subjects)}")
 
-    for subject in tqdm(subjects, desc="Processing subjects", unit="subject"):
-        try:
-            process_subject(subject, fmriprep_dir, motion_qa_dir)
-        except FileNotFoundError as e:
-            print(f"Missing data for {subject}: {e}")
-            continue
-        except ValueError as e:
-            print(f"Data error for {subject}: {e}")
-            continue
+    if not args.group_only:
+        for subject in tqdm(subjects, desc="Processing subjects", unit="subject"):
+            try:
+                process_subject(subject, fmriprep_dir, motion_qa_dir)
+            except FileNotFoundError as e:
+                print(f"Missing data for {subject}: {e}")
+                continue
+            except ValueError as e:
+                print(f"Data error for {subject}: {e}")
+                continue
 
     # Create group-level figures directory
     figures_dir = motion_qa_dir / "figures"
@@ -511,13 +651,19 @@ def main():
     try:
         create_group_fd_violin_plots_by_task(fmriprep_dir, subjects, figures_dir)
         create_group_motion_outlier_plots_by_task(fmriprep_dir, subjects, figures_dir)
+        create_group_fd_outlier_plots_by_task(fmriprep_dir, subjects, figures_dir)
     except (FileNotFoundError, ValueError) as e:
         print(f"Warning: Could not create group plots: {e}")
-        print("Individual subject plots were still generated successfully.")
+        if not args.group_only:
+            print("Individual subject plots were still generated successfully.")
 
-    print(f"\nCompleted processing {len(subjects)} subjects")
-    print(f"Subject figures saved to: {motion_qa_dir}/*/figures/")
-    print(f"Group figures saved to: {figures_dir}/")
+    if args.group_only:
+        print(f"\nGenerated group-level plots for {len(subjects)} subjects")
+        print(f"Group figures saved to: {figures_dir}/")
+    else:
+        print(f"\nCompleted processing {len(subjects)} subjects")
+        print(f"Subject figures saved to: {motion_qa_dir}/*/figures/")
+        print(f"Group figures saved to: {figures_dir}/")
 
     return 0
 

@@ -103,8 +103,40 @@ The QA pipeline follows a structured workflow:
 
 ### Script Organization
 - **`scripts/qa/`**: Quality assurance pipeline scripts that output to `data/derivatives/qa/`
+- **`scripts/stimuli/`**: Stimuli analysis and visualization scripts
 - **`scripts/presentation/`**: Stimulus presentation code
 - **`scripts/examples/`**: Example scripts from Budapest dataset (for reference)
+
+### Writing New Scripts
+New scripts should use the centralized configuration system for maintainability:
+
+```python
+from hyperface.qa import create_qa_argument_parser, get_config
+
+def main():
+    parser = create_qa_argument_parser(
+        description="Script description here.",
+        include_subjects=False,  # Set True if processing per-subject
+    )
+    args = parser.parse_args()
+
+    # Load configuration (handles --config and --data-dir CLI args)
+    config = get_config(config_path=args.config, data_dir=args.data_dir)
+
+    # Use paths from config instead of hardcoding
+    input_path = config.paths.stimuli_labels_dir / "behavioral-ratings.tsv"
+    output_dir = config.paths.stimuli_dir / "figures"
+```
+
+**Available config paths** (see `src/hyperface/qa/config.py`):
+- `config.paths.data_dir` - Root BIDS dataset directory
+- `config.paths.derivatives_dir` - BIDS derivatives directory
+- `config.paths.fmriprep_dir` - fMRIprep output directory
+- `config.paths.qa_base_dir` - Base QA output directory
+- `config.paths.tsnr_dir`, `motion_dir`, `isc_dir`, `stimuli_dir` - QA subdirectories
+- `config.paths.stimuli_labels_dir` - Stimuli labels input directory
+
+**Config file**: `src/hyperface/assets/qa_config.yaml` - Add new paths here as needed
 
 ### Jupyter Book Integration
 - **`docs/`**: Jupyter Book configuration for web documentation
