@@ -27,10 +27,13 @@ from tqdm import tqdm
 from hyperface.io import save_gifti
 from hyperface.qa import (
     build_bids_filename,
+    compute_conjunction_brainmask,
     create_qa_argument_parser,
     discover_sessions,
     discover_subjects,
     get_config,
+    group_files_by_task,
+    load_subject_brainmask,
     parse_bids_filename,
     style_violin_plot,
 )
@@ -58,16 +61,6 @@ def save_figure(fig: plt.Figure, output_path: Path, dpi: int = 150) -> None:
 def strip_bids_prefix(value: str, prefix: str) -> str:
     """Strip BIDS prefix from a value (e.g., 'sub-001' -> '001')."""
     return value.replace(f"{prefix}-", "")
-
-
-def group_files_by_task(tsnr_files: list[str]) -> dict[str, list[str]]:
-    """Group tSNR files by task."""
-    by_task: dict[str, list[str]] = defaultdict(list)
-    for f in tsnr_files:
-        parts = parse_bids_filename(f)
-        task = parts.task or "unknown"
-        by_task[task].append(f)
-    return by_task
 
 
 # =============================================================================
@@ -162,17 +155,6 @@ def compute_and_save_volume_median_tsnr(
     save_figure(fig, mosaic_path)
 
     return median_tsnr
-
-
-def compute_conjunction_brainmask(
-    mask_files: list[Path],
-    reference_shape: tuple,
-) -> np.ndarray:
-    """Compute conjunction brain mask from multiple mask files."""
-    brainmask = np.ones(reference_shape)
-    for mask_file in mask_files:
-        brainmask *= nib.load(mask_file).get_fdata()
-    return brainmask
 
 
 def create_brainmask_conjunction(
@@ -301,27 +283,6 @@ def create_violin_plots_by_task(
             extension=".png",
         )
         save_figure(fig, figures_dir / filename)
-
-
-def load_subject_brainmask(
-    subject: str,
-    tsnr_files: list[Path],
-    fmriprep_dir: Path,
-) -> np.ndarray | None:
-    """Load conjunction brain mask for a subject from fMRIPrep outputs."""
-    mask_files = []
-    for tsnr_file in tsnr_files:
-        mask_basename = tsnr_file.name.replace("desc-tsnr", "desc-brain_mask")
-        pattern = f"{subject}/**/func/{mask_basename}"
-        matches = list(fmriprep_dir.glob(pattern))
-        if matches:
-            mask_files.append(matches[0])
-
-    if not mask_files:
-        return None
-
-    reference_shape = nib.load(tsnr_files[0]).get_fdata().shape
-    return compute_conjunction_brainmask(mask_files, reference_shape)
 
 
 def create_group_volume_plots_by_task(

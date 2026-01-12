@@ -8,7 +8,7 @@ Outputs:
     - desc-proportions_barplot.png: Multi-panel bar chart of all factors
 
 Usage:
-    python scripts/stimuli/qa-plot-stimuli-stats.py
+    python scripts/qa/stimuli/plot-behavioral-ratings.py
 """
 
 import matplotlib.pyplot as plt

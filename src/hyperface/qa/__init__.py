@@ -32,6 +32,12 @@ from hyperface.qa.motion import (
     get_motion_outlier_counts,
 )
 from hyperface.qa.plotting import style_violin_plot
+from hyperface.qa.tsnr import (
+    collect_tsnr_files_by_task,
+    compute_conjunction_brainmask,
+    group_files_by_task,
+    load_subject_brainmask,
+)
 
 __all__ = [
     "QAConfig",
@@ -47,4 +53,8 @@ __all__ = [
     "get_motion_outlier_counts",
     "get_fd_outlier_counts",
     "collect_confounds_by_task",
+    "collect_tsnr_files_by_task",
+    "compute_conjunction_brainmask",
+    "group_files_by_task",
+    "load_subject_brainmask",
 ]
