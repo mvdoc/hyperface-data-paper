@@ -11,6 +11,65 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 WEBGL_PORT = 8765
 
+params_fsaverage_allviews = {
+    "figsize": [16, 9],
+    "panels": [
+        {
+            # x0, y0, width, height
+            "extent": [0.007, 0.2, 0.99, 0.8],
+            "view": {"angle": "flatmap", "surface": "flatmap"},
+        },
+        {
+            "extent": [0.13, 0.04, 0.16, 0.22],
+            "view": {
+                "hemisphere": "left",
+                "angle": "medial_pivot",
+                "surface": "inflated",
+            },
+        },
+        {
+            "extent": [0.71, 0.04, 0.16, 0.22],
+            "view": {
+                "hemisphere": "right",
+                "angle": "medial_pivot",
+                "surface": "inflated",
+            },
+        },
+        {
+            "extent": [0.00, 0.18, 0.16, 0.22],
+            "view": {
+                "hemisphere": "left",
+                "angle": "lateral_pivot",
+                "surface": "inflated",
+            },
+        },
+        {
+            "extent": [0.84, 0.18, 0.16, 0.22],
+            "view": {
+                "hemisphere": "right",
+                "angle": "lateral_pivot",
+                "surface": "inflated",
+            },
+        },
+        {
+            "extent": [0.30, 0.02, 0.17, 0.16],
+            "view": {
+                "hemisphere": "left",
+                "angle": "bottom_pivot",
+                "surface": "inflated",
+            },
+        },
+        {
+            "extent": [0.52, 0.02, 0.17, 0.16],
+            "view": {
+                "hemisphere": "right",
+                "angle": "bottom_pivot",
+                "surface": "inflated",
+            },
+        },
+    ],
+}
+
 
 def make_mosaic(data):
     """Reshape data into a mosaic plot
@@ -182,15 +241,16 @@ def create_fsaverage6_plot(
 
     if has_display():
         # Inflated 3D views (requires display/WebGL)
-        params = cortex.export.params_inflated_lateral_medial_ventral
-        windowsize = (3200, 1800)
+        params = params_fsaverage_allviews
+        # params = cortex.export.params_flatmap_inflated_lateral_medial_ventral
+        # windowsize = (3200, 1800)
         viewer_params = {
             "labels_visible": [],
-            "overlays_visible": [],
+            "overlays_visible": ["rois", ],
         }
         fig = cortex.export.plot_panels(
             surface,
-            windowsize=windowsize,
+            # windowsize=windowsize,
             viewer_params=viewer_params,
             **params,
         )
