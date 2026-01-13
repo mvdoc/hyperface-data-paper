@@ -138,7 +138,7 @@ def create_motion_trace_plots(
         filename_parts.extend(["desc-motion", "traces.png"])
 
         output_path = figures_dir / "_".join(filename_parts)
-        fig.savefig(output_path, dpi=150, bbox_inches="tight")
+        fig.savefig(output_path, dpi=300, bbox_inches="tight")
         plt.close(fig)
         print(f"    Saved: {output_path.name}")
 
@@ -204,7 +204,7 @@ def create_fd_trace_plots(
         filename_parts.extend(["desc-fd", "trace.png"])
 
         output_path = figures_dir / "_".join(filename_parts)
-        fig.savefig(output_path, dpi=150, bbox_inches="tight")
+        fig.savefig(output_path, dpi=300, bbox_inches="tight")
         plt.close(fig)
         print(f"    Saved: {output_path.name}")
 
@@ -301,7 +301,7 @@ def create_fd_violin_plots_by_session(
         filename_parts.extend(["desc-fd", "violinplot.png"])
 
         output_path = figures_dir / "_".join(filename_parts)
-        fig.savefig(output_path, dpi=150, bbox_inches="tight")
+        fig.savefig(output_path, dpi=600, bbox_inches="tight")
         plt.close(fig)
         print(f"      Saved: {output_path.name}")
 
@@ -391,7 +391,11 @@ def create_group_fd_violin_plots_by_task(
             if fd_values:
                 subject_labels.append(subject)
                 subject_fd_data.append(fd_values)
-                pct = (total_outliers / total_timepoints * 100) if total_timepoints > 0 else 0
+                pct = (
+                    (total_outliers / total_timepoints * 100)
+                    if total_timepoints > 0
+                    else 0
+                )
                 outlier_percentages.append(pct)
 
         if not subject_fd_data:
@@ -415,9 +419,7 @@ def create_group_fd_violin_plots_by_task(
         fig, ax = plt.subplots(1, 1, figsize=(max(12, len(main_data) * 0.8), 6))
         positions = list(range(len(main_data)))
 
-        violin_parts = ax.violinplot(
-            main_data, positions=positions, showmedians=True
-        )
+        violin_parts = ax.violinplot(main_data, positions=positions, showmedians=True)
         style_violin_plot(violin_parts, style="fd")
 
         # Add high-motion points as individual scatter markers
@@ -470,7 +472,7 @@ def create_group_fd_violin_plots_by_task(
         plt.tight_layout()
 
         output_path = figures_dir / f"group_task-{task}_desc-fd_violinplot.png"
-        fig.savefig(output_path, dpi=150, bbox_inches="tight")
+        fig.savefig(output_path, dpi=600, bbox_inches="tight")
         plt.close(fig)
         print(f"  Saved: {output_path.name}")
 
@@ -526,7 +528,7 @@ def create_group_motion_outlier_plots_by_task(
         plt.tight_layout()
 
         output_path = figures_dir / f"group_task-{task}_desc-motionoutliers_barplot.png"
-        fig.savefig(output_path, dpi=150, bbox_inches="tight")
+        fig.savefig(output_path, dpi=300, bbox_inches="tight")
         plt.close(fig)
         print(f"  Saved: {output_path.name}")
 
@@ -590,14 +592,16 @@ def create_group_fd_outlier_plots_by_task(
         ax.set_xticklabels(subject_labels, fontsize=14, rotation=45, ha="right")
         ax.tick_params(axis="y", labelsize=14)
         ax.set_ylabel("FD Outliers (%)", fontsize=16)
-        ax.set_title(f"Group FD Outliers (>{fd_threshold}mm) - task-{task}", fontsize=18)
+        ax.set_title(
+            f"Group FD Outliers (>{fd_threshold}mm) - task-{task}", fontsize=18
+        )
         ax.grid(True, axis="y", alpha=0.5)
 
         sns.despine()
         plt.tight_layout()
 
         output_path = figures_dir / f"group_task-{task}_desc-fdoutliers_barplot.png"
-        fig.savefig(output_path, dpi=150, bbox_inches="tight")
+        fig.savefig(output_path, dpi=300, bbox_inches="tight")
         plt.close(fig)
         print(f"  Saved: {output_path.name}")
 

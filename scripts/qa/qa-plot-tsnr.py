@@ -6,11 +6,14 @@ pre-computed tSNR data. It also saves median tSNR maps per task.
 
 Outputs are split by task (visualmemory, localizer).
 
-The script automatically skips outputs that already exist:
-- Volume: skips subjects with existing median tSNR NIfTI files
-- Group volume: skips if group violin plots exist
-- Surface: skips individual subject/group plots that exist for current
-  display mode (inflated with display, flatmap without)
+The script automatically skips individual outputs that already exist:
+- Mosaic plots: skips if the specific mosaic PNG exists
+- Median tSNR: skips if both NIfTI and mosaic exist for that task
+- Violin plots: skips if the specific violin plot PNG exists
+- Surface plots: skips if the specific surface plot exists
+
+Each output type is checked independently, so missing outputs will be
+created even if other outputs exist.
 
 Examples:
     # Process all subjects (auto-skips completed work)
@@ -59,7 +62,7 @@ TSNR_VMIN = 0
 TSNR_VMAX = 200
 
 
-def save_figure(fig: plt.Figure, output_path: Path, dpi: int = 150) -> None:
+def save_figure(fig: plt.Figure, output_path: Path, dpi: int = 300) -> None:
     """Save matplotlib figure and close it."""
     plt.tight_layout()
     fig.savefig(output_path, dpi=dpi, bbox_inches="tight")
@@ -82,17 +85,16 @@ def create_mosaic_plots_by_task(
     session: str | None,
     tsnr_files_by_task: dict[str, list[str]],
     figures_dir: Path,
+    force: bool = False,
 ) -> None:
     """Create mosaic plots for each run and task-level median."""
-    print("  Creating mosaic plots by task...")
-
     subj_id = strip_bids_prefix(subject, "sub")
     sess_id = strip_bids_prefix(session, "ses") if session else None
 
+    created_any = False
     for task, task_files in tsnr_files_by_task.items():
         for tsnr_file in task_files:
             parts = parse_bids_filename(tsnr_file)
-            data = nib.load(tsnr_file).get_fdata()
 
             filename = build_bids_filename(
                 subject=subj_id,
@@ -105,6 +107,15 @@ def create_mosaic_plots_by_task(
                 extension=".png",
             )
             output_path = figures_dir / filename
+
+            if not force and output_path.exists():
+                continue
+
+            if not created_any:
+                print("  Creating mosaic plots by task...")
+                created_any = True
+
+            data = nib.load(tsnr_file).get_fdata()
 
             title = f"{subject} task-{task}"
             if parts.run:
@@ -123,15 +134,16 @@ def compute_and_save_volume_median_tsnr(
     subject_dir: Path,
     figures_dir: Path,
     reference_img_path: str,
-) -> np.ndarray:
-    """Compute median tSNR across runs for a task and save as NIfTI."""
-    tsnr_data = [nib.load(f).get_fdata() for f in tsnr_files]
-    median_tsnr = np.median(tsnr_data, axis=0)
+    force: bool = False,
+) -> np.ndarray | None:
+    """Compute median tSNR across runs for a task and save as NIfTI.
 
+    Returns the median tSNR array, or None if outputs already exist and not forced.
+    """
     subj_id = strip_bids_prefix(subject, "sub")
     sess_id = strip_bids_prefix(session, "ses") if session else None
 
-    # Save NIfTI in subject/session directory
+    # Check if outputs already exist
     nifti_dir = subject_dir / session if session else subject_dir
     nifti_filename = build_bids_filename(
         subject=subj_id,
@@ -142,11 +154,7 @@ def compute_and_save_volume_median_tsnr(
         extension=".nii.gz",
     )
     nifti_path = nifti_dir / nifti_filename
-    median_img = nimage.new_img_like(reference_img_path, median_tsnr)
-    median_img.to_filename(str(nifti_path))
-    print(f"    Saved NIfTI: {nifti_path.name}")
 
-    # Create mosaic plot in figures dir
     mosaic_filename = build_bids_filename(
         subject=subj_id,
         session=sess_id,
@@ -158,10 +166,26 @@ def compute_and_save_volume_median_tsnr(
     )
     mosaic_path = figures_dir / mosaic_filename
 
-    title = f"{subject} task-{task} median tSNR"
-    mosaic = make_mosaic(median_tsnr)
-    fig = plot_mosaic(mosaic, vmin=TSNR_VMIN, vmax=TSNR_VMAX, title=title)
-    save_figure(fig, mosaic_path)
+    # If both exist and not forced, skip
+    if not force and nifti_path.exists() and mosaic_path.exists():
+        return None
+
+    # Compute median
+    tsnr_data = [nib.load(f).get_fdata() for f in tsnr_files]
+    median_tsnr = np.median(tsnr_data, axis=0)
+
+    # Save NIfTI if needed
+    if force or not nifti_path.exists():
+        median_img = nimage.new_img_like(reference_img_path, median_tsnr)
+        median_img.to_filename(str(nifti_path))
+        print(f"    Saved NIfTI: {nifti_path.name}")
+
+    # Create mosaic plot if needed
+    if force or not mosaic_path.exists():
+        title = f"{subject} task-{task} median tSNR"
+        mosaic = make_mosaic(median_tsnr)
+        fig = plot_mosaic(mosaic, vmin=TSNR_VMIN, vmax=TSNR_VMAX, title=title)
+        save_figure(fig, mosaic_path)
 
     return median_tsnr
 
@@ -172,9 +196,21 @@ def create_brainmask_conjunction(
     tsnr_files: list[str],
     figures_dir: Path,
     fmriprep_dir: Path,
+    force: bool = False,
 ) -> np.ndarray | None:
     """Create conjunction brain mask and visualization."""
-    print("  Creating conjunction brain mask...")
+    subj_id = strip_bids_prefix(subject, "sub")
+    sess_id = strip_bids_prefix(session, "ses") if session else None
+
+    filename = build_bids_filename(
+        subject=subj_id,
+        session=sess_id,
+        space="T1w",
+        desc="brainmask",
+        suffix="mosaic",
+        extension=".png",
+    )
+    output_path = figures_dir / filename
 
     func_dir = fmriprep_dir / subject
     if session:
@@ -199,22 +235,12 @@ def create_brainmask_conjunction(
     reference_shape = nib.load(tsnr_files[0]).get_fdata().shape
     brainmask = compute_conjunction_brainmask(mask_files, reference_shape)
 
-    subj_id = strip_bids_prefix(subject, "sub")
-    sess_id = strip_bids_prefix(session, "ses") if session else None
-
-    filename = build_bids_filename(
-        subject=subj_id,
-        session=sess_id,
-        space="T1w",
-        desc="brainmask",
-        suffix="mosaic",
-        extension=".png",
-    )
-    output_path = figures_dir / filename
-
-    title = f"{subject} {session or ''} conjunction brainmask".strip()
-    fig = plot_mosaic(make_mosaic(brainmask), vmin=0, vmax=1, title=title)
-    save_figure(fig, output_path)
+    # Only create plot if needed
+    if force or not output_path.exists():
+        print("  Creating conjunction brain mask...")
+        title = f"{subject} {session or ''} conjunction brainmask".strip()
+        fig = plot_mosaic(make_mosaic(brainmask), vmin=0, vmax=1, title=title)
+        save_figure(fig, output_path)
 
     return brainmask
 
@@ -232,17 +258,40 @@ def create_violin_plots_by_task(
     tsnr_files_by_task: dict[str, list[str]],
     brainmask: np.ndarray | None,
     figures_dir: Path,
+    force: bool = False,
 ) -> None:
     """Create violin plots for tSNR files, one plot per task."""
-    print("  Creating violin plots by task...")
-
     if brainmask is None:
         print("    Warning: No brain mask available, skipping violin plots")
         return
 
+    subj_id = strip_bids_prefix(subject, "sub")
+    sess_id = strip_bids_prefix(session, "ses") if session else None
+
+    # Check which tasks need processing
+    tasks_to_process = []
+    for task in tsnr_files_by_task.keys():
+        filename = build_bids_filename(
+            subject=subj_id,
+            session=sess_id,
+            task=task,
+            desc="tsnr",
+            suffix="violinplot",
+            extension=".png",
+        )
+        output_path = figures_dir / filename
+        if force or not output_path.exists():
+            tasks_to_process.append(task)
+
+    if not tasks_to_process:
+        return
+
+    print("  Creating violin plots by task...")
     mask_bool = brainmask.astype(bool)
 
-    for task, task_files in tsnr_files_by_task.items():
+    for task in tasks_to_process:
+        task_files = tsnr_files_by_task[task]
+
         # Load and sort data by run number
         run_info = []
         for tsnr_file in task_files:
@@ -280,9 +329,6 @@ def create_violin_plots_by_task(
         ax.grid(True, axis="y", alpha=0.5)
         sns.despine()
 
-        subj_id = strip_bids_prefix(subject, "sub")
-        sess_id = strip_bids_prefix(session, "ses") if session else None
-
         filename = build_bids_filename(
             subject=subj_id,
             session=sess_id,
@@ -291,7 +337,7 @@ def create_violin_plots_by_task(
             suffix="violinplot",
             extension=".png",
         )
-        save_figure(fig, figures_dir / filename)
+        save_figure(fig, figures_dir / filename, dpi=600)
 
 
 def create_group_volume_plots_by_task(
@@ -299,11 +345,33 @@ def create_group_volume_plots_by_task(
     fmriprep_dir: Path,
     subjects: list[str],
     figures_dir: Path,
+    force: bool = False,
 ) -> None:
     """Create group-level volume tSNR plots split by task."""
+    # First, discover all tasks to check which ones need processing
+    all_tasks = set()
+    for subject in subjects:
+        subject_dir = tsnr_dir / subject
+        if not subject_dir.exists():
+            continue
+        tsnr_files = list(subject_dir.glob("**/*_desc-tsnr.nii.gz"))
+        files_by_task = group_files_by_task([str(f) for f in tsnr_files])
+        all_tasks.update(files_by_task.keys())
+
+    # Check which tasks need processing
+    tasks_to_process = []
+    for task in all_tasks:
+        output_path = figures_dir / f"group_task-{task}_desc-tsnr_violinplot.png"
+        if force or not output_path.exists():
+            tasks_to_process.append(task)
+
+    if not tasks_to_process:
+        print("\nSkipping group volume plots: all tasks already exist")
+        return
+
     print("\nCreating group-level volume tSNR plots by task...")
 
-    # Collect data by task across all subjects
+    # Collect data by task across all subjects (only for tasks that need processing)
     task_data: dict[str, list[tuple[str, np.ndarray]]] = defaultdict(list)
 
     for subject in subjects:
@@ -322,7 +390,10 @@ def create_group_volume_plots_by_task(
         mask_bool = brainmask.astype(bool)
         files_by_task = group_files_by_task([str(f) for f in tsnr_files])
 
-        for task, task_files in files_by_task.items():
+        for task in tasks_to_process:
+            if task not in files_by_task:
+                continue
+            task_files = files_by_task[task]
             tsnr_volumes = [nib.load(f).get_fdata() for f in task_files]
             median_tsnr = np.median(tsnr_volumes, axis=0)
             masked_data = median_tsnr[mask_bool]
@@ -354,7 +425,7 @@ def create_group_volume_plots_by_task(
         sns.despine()
 
         output_path = figures_dir / f"group_task-{task}_desc-tsnr_violinplot.png"
-        save_figure(fig, output_path)
+        save_figure(fig, output_path, dpi=600)
 
 
 # =============================================================================
@@ -408,19 +479,37 @@ def load_surface_tsnr_data_by_task(
     return dict(result)
 
 
+def get_surface_gifti_paths(
+    output_dir: Path,
+    filename_base: str,
+) -> tuple[Path, Path]:
+    """Get paths for L/R GIFTI pair."""
+    suffix = "_space-fsaverage6_desc-mediantsnr.func.gii"
+    fn_L = output_dir / f"{filename_base}_hemi-L{suffix}"
+    fn_R = output_dir / f"{filename_base}_hemi-R{suffix}"
+    return fn_L, fn_R
+
+
 def save_surface_gifti_pair(
     data: np.ndarray,
     output_dir: Path,
     filename_base: str,
-) -> None:
-    """Save combined hemisphere data as L/R GIFTI pair."""
+    force: bool = False,
+) -> bool:
+    """Save combined hemisphere data as L/R GIFTI pair.
+
+    Returns True if files were saved, False if skipped (already exist).
+    """
+    fn_L, fn_R = get_surface_gifti_paths(output_dir, filename_base)
+
+    if not force and fn_L.exists() and fn_R.exists():
+        return False
+
     tsnr_L, tsnr_R = split_hemispheres(data)
-    suffix = "_space-fsaverage6_desc-mediantsnr.func.gii"
-    fn_L = output_dir / f"{filename_base}_hemi-L{suffix}"
-    fn_R = output_dir / f"{filename_base}_hemi-R{suffix}"
     save_gifti(tsnr_L, fn_L)
     save_gifti(tsnr_R, fn_R)
     print(f"    Saved surface GIFTI: {fn_L.name}, {fn_R.name}")
+    return True
 
 
 def save_surface_median_tsnr(
@@ -429,6 +518,7 @@ def save_surface_median_tsnr(
     session: str | None,
     task: str,
     subject_dir: Path,
+    force: bool = False,
 ) -> np.ndarray:
     """Save subject median surface tSNR as GIFTI (L+R hemispheres)."""
     median_tsnr = np.median(tsnr_runs, axis=0)
@@ -444,7 +534,7 @@ def save_surface_median_tsnr(
     parts.append(f"task-{task}")
     filename_base = "_".join(parts)
 
-    save_surface_gifti_pair(median_tsnr, out_dir, filename_base)
+    save_surface_gifti_pair(median_tsnr, out_dir, filename_base, force)
     return median_tsnr
 
 
@@ -452,10 +542,11 @@ def save_group_surface_median_tsnr(
     median_tsnr_list: list[np.ndarray],
     task: str,
     tsnr_dir: Path,
+    force: bool = False,
 ) -> np.ndarray:
     """Save group median surface tSNR as GIFTI."""
     group_median = np.median(median_tsnr_list, axis=0)
-    save_surface_gifti_pair(group_median, tsnr_dir, f"group_task-{task}")
+    save_surface_gifti_pair(group_median, tsnr_dir, f"group_task-{task}", force)
     return group_median
 
 
@@ -489,7 +580,7 @@ def create_surface_tsnr_plots_by_task(
             session = sessions[0].name if sessions else None
 
             median_tsnr = save_surface_median_tsnr(
-                run_list, subject_id, session, task, subject_dir
+                run_list, subject_id, session, task, subject_dir, force
             )
             subject_medians.append(median_tsnr)
 
@@ -514,7 +605,7 @@ def create_surface_tsnr_plots_by_task(
         # Save and plot group median (skip if exists)
         if subject_medians:
             group_median = save_group_surface_median_tsnr(
-                subject_medians, task, tsnr_dir
+                subject_medians, task, tsnr_dir, force
             )
 
             if force or not group_surface_output_exists(task, figures_dir, plot_type):
@@ -547,6 +638,7 @@ def process_session_data(
     figures_dir: Path,
     fmriprep_dir: Path,
     brainmask: np.ndarray | None,
+    force: bool = False,
 ) -> np.ndarray | None:
     """Process volume data for a single session (or no-session case).
 
@@ -554,19 +646,28 @@ def process_session_data(
     """
     files_by_task = group_files_by_task(tsnr_files)
 
-    create_mosaic_plots_by_task(subject, session, files_by_task, figures_dir)
+    create_mosaic_plots_by_task(subject, session, files_by_task, figures_dir, force)
 
     if brainmask is None:
         brainmask = create_brainmask_conjunction(
-            subject, session, tsnr_files, figures_dir, fmriprep_dir
+            subject, session, tsnr_files, figures_dir, fmriprep_dir, force
         )
 
     for task, task_files in files_by_task.items():
         compute_and_save_volume_median_tsnr(
-            subject, session, task_files, task, subject_dir, figures_dir, task_files[0]
+            subject,
+            session,
+            task_files,
+            task,
+            subject_dir,
+            figures_dir,
+            task_files[0],
+            force,
         )
 
-    create_violin_plots_by_task(subject, session, files_by_task, brainmask, figures_dir)
+    create_violin_plots_by_task(
+        subject, session, files_by_task, brainmask, figures_dir, force
+    )
 
     return brainmask
 
@@ -575,6 +676,7 @@ def process_subject(
     subject: str,
     tsnr_dir: Path,
     fmriprep_dir: Path,
+    force: bool = False,
 ) -> None:
     """Process a single subject to create all volume plots and save medians."""
     print(f"Processing {subject}...")
@@ -600,6 +702,7 @@ def process_subject(
             figures_dir,
             fmriprep_dir,
             brainmask=None,
+            force=force,
         )
     else:
         # Multi-session dataset
@@ -620,25 +723,13 @@ def process_subject(
                 figures_dir,
                 fmriprep_dir,
                 brainmask,
+                force=force,
             )
 
 
 # =============================================================================
 # Output existence checks (for skipping completed work)
 # =============================================================================
-
-
-def subject_volume_outputs_exist(subject: str, tsnr_dir: Path) -> bool:
-    """Check if volume outputs already exist for a subject."""
-    subject_dir = tsnr_dir / subject
-    median_files = list(subject_dir.glob("**/*_desc-mediantsnr.nii.gz"))
-    return len(median_files) > 0
-
-
-def group_volume_outputs_exist(figures_dir: Path) -> bool:
-    """Check if group volume violin plots exist."""
-    group_plots = list(figures_dir.glob("group_task-*_violinplot.png"))
-    return len(group_plots) > 0
 
 
 def subject_surface_output_exists(
@@ -688,35 +779,22 @@ def main():
     figures_dir = tsnr_dir / "figures"
     figures_dir.mkdir(exist_ok=True)
 
-    # Process volume data for each subject (skip if outputs exist)
-    subjects_to_process = []
-    for subject in subjects:
-        if not args.force and subject_volume_outputs_exist(subject, tsnr_dir):
-            print(f"Skipping {subject}: volume outputs already exist")
-        else:
-            subjects_to_process.append(subject)
+    # Process volume data for each subject (each function skips existing outputs)
+    for subject in tqdm(subjects, desc="Processing subjects", unit="subject"):
+        try:
+            process_subject(subject, tsnr_dir, fmriprep_dir, force=args.force)
+        except FileNotFoundError as e:
+            print(f"Missing data for {subject}: {e}")
+            continue
+        except (nib.filebasedimages.ImageFileError, ValueError) as e:
+            print(f"Data loading error for {subject}: {e}")
+            print("  NIfTI files may be corrupted. Try re-running tSNR computation.")
+            continue
 
-    if subjects_to_process:
-        for subject in tqdm(
-            subjects_to_process, desc="Processing subjects", unit="subject"
-        ):
-            try:
-                process_subject(subject, tsnr_dir, fmriprep_dir)
-            except FileNotFoundError as e:
-                print(f"Missing data for {subject}: {e}")
-                continue
-            except (nib.filebasedimages.ImageFileError, ValueError) as e:
-                print(f"Data loading error for {subject}: {e}")
-                print(
-                    "  NIfTI files may be corrupted. Try re-running tSNR computation."
-                )
-                continue
-
-    # Create group-level volume plots (skip if outputs exist)
-    if args.force or not group_volume_outputs_exist(figures_dir):
-        create_group_volume_plots_by_task(tsnr_dir, fmriprep_dir, subjects, figures_dir)
-    else:
-        print("\nSkipping group volume plots: already exist")
+    # Create group-level volume plots (function skips existing outputs per task)
+    create_group_volume_plots_by_task(
+        tsnr_dir, fmriprep_dir, subjects, figures_dir, force=args.force
+    )
 
     # Surface plotting (skips individual plots that already exist)
     print("\nChecking for surface tSNR data...")

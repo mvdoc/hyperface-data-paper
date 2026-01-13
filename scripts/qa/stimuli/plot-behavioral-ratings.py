@@ -18,7 +18,7 @@ import seaborn as sns
 from hyperface.qa import create_qa_argument_parser, get_config
 
 # Plot settings
-DPI = 150
+DPI = 300
 PRIMARY_COLOR = "steelblue"
 EDGE_COLOR = "darkslategray"
 

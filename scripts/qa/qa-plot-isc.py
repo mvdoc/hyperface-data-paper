@@ -88,7 +88,7 @@ def create_isc_violin_plot(
     sns.despine()
     plt.tight_layout()
 
-    fig.savefig(output_path, dpi=150, bbox_inches="tight")
+    fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
     print(f"Saved violin plot to: {output_path}")
 
@@ -111,8 +111,11 @@ def print_summary_stats(isc_data: list[np.ndarray], subject_ids: list[str]) -> N
     valid_all = all_isc[np.isfinite(all_isc)]
     print("-" * 60)
     vals = [
-        valid_all.mean(), np.median(valid_all), valid_all.std(),
-        valid_all.min(), valid_all.max(),
+        valid_all.mean(),
+        np.median(valid_all),
+        valid_all.std(),
+        valid_all.min(),
+        valid_all.max(),
     ]
     row = f"{'Group':<15} " + " ".join(f"{v:>8.4f}" for v in vals)
     print(row)
