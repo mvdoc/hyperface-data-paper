@@ -169,15 +169,15 @@ def main():
     print(f"\nUsing {plot_type} visualization (DISPLAY={display_status})")
 
     # Create individual subject surface plots
-    # print("\nCreating individual subject surface plots...")
-    # for subject_id, isc in zip(subject_ids, isc_data):
-    #     subject_path = figures_dir / f"{subject_id}_desc-isc_{plot_type}.png"
-    #     create_fsaverage6_plot(
-    #         isc,
-    #         subject_path,
-    #         freesurfer_subjects_dir=config.paths.freesurfer_dir,
-    #         title=subject_id.replace("sub-", ""),
-    #     )
+    print("\nCreating individual subject surface plots...")
+    for subject_id, isc in zip(subject_ids, isc_data):
+        subject_path = figures_dir / f"{subject_id}_desc-isc_{plot_type}.png"
+        create_fsaverage6_plot(
+            isc,
+            subject_path,
+            freesurfer_subjects_dir=config.paths.freesurfer_dir,
+            title=subject_id.replace("sub-", ""),
+        )
 
     # Create group median surface plot
     print("\nCreating group median surface plot...")

@@ -6,12 +6,21 @@ pre-computed tSNR data. It also saves median tSNR maps per task.
 
 Outputs are split by task (visualmemory, localizer).
 
+The script automatically skips outputs that already exist:
+- Volume: skips subjects with existing median tSNR NIfTI files
+- Group volume: skips if group violin plots exist
+- Surface: skips individual subject/group plots that exist for current
+  display mode (inflated with display, flatmap without)
+
 Examples:
-    # Process all subjects
+    # Process all subjects (auto-skips completed work)
     python scripts/qa/qa-plot-tsnr.py
 
     # Process specific subjects
     python scripts/qa/qa-plot-tsnr.py --subjects sub-001 sub-002
+
+    # Force regenerate all outputs
+    python scripts/qa/qa-plot-tsnr.py --force
 """
 
 from collections import defaultdict
@@ -328,9 +337,7 @@ def create_group_volume_plots_by_task(
         subject_labels = [s[0] for s in subject_data_list]
         subject_tsnr_data = [s[1] for s in subject_data_list]
 
-        fig, ax = plt.subplots(
-            1, 1, figsize=(max(12, len(subject_tsnr_data) * 0.8), 6)
-        )
+        fig, ax = plt.subplots(1, 1, figsize=(max(12, len(subject_tsnr_data) * 0.8), 6))
         positions = list(range(len(subject_tsnr_data)))
 
         violin_parts = ax.violinplot(
@@ -457,8 +464,13 @@ def create_surface_tsnr_plots_by_task(
     tsnr_dir: Path,
     figures_dir: Path,
     freesurfer_subjects_dir: Path | None,
+    force: bool = False,
 ) -> None:
-    """Create surface plots for each task separately."""
+    """Create surface plots for each task separately.
+
+    Skips individual subject plots and group plots that already exist
+    unless force=True.
+    """
     plot_type = "inflated" if has_display() else "flatmap"
 
     for task, subject_data in tsnr_data_by_task.items():
@@ -481,35 +493,45 @@ def create_surface_tsnr_plots_by_task(
             )
             subject_medians.append(median_tsnr)
 
-            # Create individual subject surface plot
-            fname = f"{subject_id}_task-{task}_desc-tsnr_{plot_type}.png"
-            output_path = figures_dir / fname
-            create_fsaverage6_plot(
-                median_tsnr,
-                output_path,
-                cmap=TSNR_CMAP,
-                vmin=TSNR_VMIN,
-                vmax=TSNR_VMAX,
-                freesurfer_subjects_dir=freesurfer_subjects_dir,
-                title=f"{subject_id.replace('sub-', '')} task-{task}",
-            )
+            # Create individual subject surface plot (skip if exists)
+            if force or not subject_surface_output_exists(
+                subject_id, task, figures_dir, plot_type
+            ):
+                fname = f"{subject_id}_task-{task}_desc-tsnr_{plot_type}.png"
+                output_path = figures_dir / fname
+                create_fsaverage6_plot(
+                    median_tsnr,
+                    output_path,
+                    cmap=TSNR_CMAP,
+                    vmin=TSNR_VMIN,
+                    vmax=TSNR_VMAX,
+                    freesurfer_subjects_dir=freesurfer_subjects_dir,
+                    title=f"{subject_id.replace('sub-', '')} task-{task}",
+                )
+            else:
+                print(f"    Skipping {subject_id}: surface plot already exists")
 
-        # Save and plot group median
+        # Save and plot group median (skip if exists)
         if subject_medians:
             group_median = save_group_surface_median_tsnr(
                 subject_medians, task, tsnr_dir
             )
 
-            group_path = figures_dir / f"group_task-{task}_desc-tsnr_{plot_type}.png"
-            create_fsaverage6_plot(
-                group_median,
-                group_path,
-                cmap=TSNR_CMAP,
-                vmin=TSNR_VMIN,
-                vmax=TSNR_VMAX,
-                freesurfer_subjects_dir=freesurfer_subjects_dir,
-                title=f"Group Median task-{task}",
-            )
+            if force or not group_surface_output_exists(task, figures_dir, plot_type):
+                group_path = (
+                    figures_dir / f"group_task-{task}_desc-tsnr_{plot_type}.png"
+                )
+                create_fsaverage6_plot(
+                    group_median,
+                    group_path,
+                    cmap=TSNR_CMAP,
+                    vmin=TSNR_VMIN,
+                    vmax=TSNR_VMAX,
+                    freesurfer_subjects_dir=freesurfer_subjects_dir,
+                    title=f"Group Median task-{task}",
+                )
+            else:
+                print(f"    Skipping group plot for task-{task}: already exists")
 
 
 # =============================================================================
@@ -541,8 +563,7 @@ def process_session_data(
 
     for task, task_files in files_by_task.items():
         compute_and_save_volume_median_tsnr(
-            subject, session, task_files, task, subject_dir, figures_dir,
-            task_files[0]
+            subject, session, task_files, task, subject_dir, figures_dir, task_files[0]
         )
 
     create_violin_plots_by_task(subject, session, files_by_task, brainmask, figures_dir)
@@ -572,8 +593,13 @@ def process_subject(
             return
 
         process_session_data(
-            subject, None, [str(f) for f in tsnr_files],
-            subject_dir, figures_dir, fmriprep_dir, brainmask=None
+            subject,
+            None,
+            [str(f) for f in tsnr_files],
+            subject_dir,
+            figures_dir,
+            fmriprep_dir,
+            brainmask=None,
         )
     else:
         # Multi-session dataset
@@ -587,15 +613,57 @@ def process_subject(
                 continue
 
             brainmask = process_session_data(
-                subject, session, [str(f) for f in tsnr_files],
-                subject_dir, figures_dir, fmriprep_dir, brainmask
+                subject,
+                session,
+                [str(f) for f in tsnr_files],
+                subject_dir,
+                figures_dir,
+                fmriprep_dir,
+                brainmask,
             )
+
+
+# =============================================================================
+# Output existence checks (for skipping completed work)
+# =============================================================================
+
+
+def subject_volume_outputs_exist(subject: str, tsnr_dir: Path) -> bool:
+    """Check if volume outputs already exist for a subject."""
+    subject_dir = tsnr_dir / subject
+    median_files = list(subject_dir.glob("**/*_desc-mediantsnr.nii.gz"))
+    return len(median_files) > 0
+
+
+def group_volume_outputs_exist(figures_dir: Path) -> bool:
+    """Check if group volume violin plots exist."""
+    group_plots = list(figures_dir.glob("group_task-*_violinplot.png"))
+    return len(group_plots) > 0
+
+
+def subject_surface_output_exists(
+    subject: str, task: str, figures_dir: Path, plot_type: str
+) -> bool:
+    """Check if surface plot exists for a specific subject and task."""
+    fname = f"{subject}_task-{task}_desc-tsnr_{plot_type}.png"
+    return (figures_dir / fname).exists()
+
+
+def group_surface_output_exists(task: str, figures_dir: Path, plot_type: str) -> bool:
+    """Check if group surface plot exists for a task."""
+    fname = f"group_task-{task}_desc-tsnr_{plot_type}.png"
+    return (figures_dir / fname).exists()
 
 
 def main():
     parser = create_qa_argument_parser(
         description="Generate QA plots for tSNR data",
         include_subjects=True,
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Force regeneration of all outputs, even if they exist.",
     )
     args = parser.parse_args()
 
@@ -620,22 +688,37 @@ def main():
     figures_dir = tsnr_dir / "figures"
     figures_dir.mkdir(exist_ok=True)
 
-    # Process volume data for each subject
-    for subject in tqdm(subjects, desc="Processing subjects", unit="subject"):
-        try:
-            process_subject(subject, tsnr_dir, fmriprep_dir)
-        except FileNotFoundError as e:
-            print(f"Missing data for {subject}: {e}")
-            continue
-        except (nib.filebasedimages.ImageFileError, ValueError) as e:
-            print(f"Data loading error for {subject}: {e}")
-            print("  NIfTI files may be corrupted. Try re-running tSNR computation.")
-            continue
+    # Process volume data for each subject (skip if outputs exist)
+    subjects_to_process = []
+    for subject in subjects:
+        if not args.force and subject_volume_outputs_exist(subject, tsnr_dir):
+            print(f"Skipping {subject}: volume outputs already exist")
+        else:
+            subjects_to_process.append(subject)
 
-    # Create group-level volume plots
-    create_group_volume_plots_by_task(tsnr_dir, fmriprep_dir, subjects, figures_dir)
+    if subjects_to_process:
+        for subject in tqdm(
+            subjects_to_process, desc="Processing subjects", unit="subject"
+        ):
+            try:
+                process_subject(subject, tsnr_dir, fmriprep_dir)
+            except FileNotFoundError as e:
+                print(f"Missing data for {subject}: {e}")
+                continue
+            except (nib.filebasedimages.ImageFileError, ValueError) as e:
+                print(f"Data loading error for {subject}: {e}")
+                print(
+                    "  NIfTI files may be corrupted. Try re-running tSNR computation."
+                )
+                continue
 
-    # Surface plotting (if surface tSNR data exists)
+    # Create group-level volume plots (skip if outputs exist)
+    if args.force or not group_volume_outputs_exist(figures_dir):
+        create_group_volume_plots_by_task(tsnr_dir, fmriprep_dir, subjects, figures_dir)
+    else:
+        print("\nSkipping group volume plots: already exist")
+
+    # Surface plotting (skips individual plots that already exist)
     print("\nChecking for surface tSNR data...")
     surface_data_by_task = load_surface_tsnr_data_by_task(tsnr_dir)
 
@@ -649,6 +732,7 @@ def main():
             tsnr_dir,
             figures_dir,
             config.paths.freesurfer_dir,
+            force=args.force,
         )
         print(f"\nSurface plots saved to: {figures_dir}/")
     else:
