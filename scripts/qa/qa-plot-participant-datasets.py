@@ -39,34 +39,38 @@ def main():
     matrix[:, 1] = (df["budapest"] == "Yes").astype(int)
     matrix[:, 2] = (df["identity_decoding"] == "Yes").astype(int)
 
-    # Create figure with square cells
-    fig, ax = plt.subplots(figsize=(2, n_participants * 0.25))
+    # Create figure
+    fig, ax = plt.subplots(figsize=(0.8, n_participants * 0.2))
 
-    # Plot heatmap using pcolormesh for precise cell edges
-    cmap = plt.cm.colors.ListedColormap(["white", "tab:blue"])
-    ax.pcolormesh(
-        matrix,
-        cmap=cmap,
-        vmin=0,
-        vmax=1,
-        edgecolors="lightgray",
-        linewidth=0.3,
-    )
-    ax.set_aspect("equal")
-    ax.invert_yaxis()
+    # Colors for each dataset
+    colors = ["tab:blue", "tab:orange", "tab:green"]
+    labels = ["hyperface", "budapest", "identity decoding"]
+
+    # Plot dots for each dataset
+    for j in range(3):
+        for i in range(n_participants):
+            if matrix[i, j] == 1:
+                ax.scatter(j, i, color=colors[j], s=20, marker="o")
+            else:
+                ax.scatter(j, i, color="lightgray", s=20, marker="o", facecolors="none")
+
+    # Add legend handles
+    for j in range(3):
+        ax.scatter([], [], color=colors[j], s=20, marker="o", label=labels[j])
+
+    ax.set_xlim(-0.5, 2.5)
+    ax.set_ylim(n_participants - 0.5, -0.5)
 
     # Labels
-    ax.set_xticks(np.arange(3) + 0.5)
-    ax.set_xticklabels(
-        ["hyperface", "budapest", "identity\ndecoding"], rotation=45, ha="left"
-    )
-    ax.xaxis.tick_top()
-    ax.set_yticks(np.arange(n_participants) + 0.5)
+    ax.set_xticks([])
+    ax.set_yticks(range(n_participants))
     ax.set_yticklabels(df["participant_id"].str.replace("sub-", ""))
 
-    ax.set_ylabel("Participant")
+    ax.tick_params(axis="both", length=0)
+    ax.spines[["top", "right", "bottom", "left"]].set_visible(False)
 
-    plt.tight_layout()
+    # Legend at bottom, left-aligned with y-axis labels
+    ax.legend(loc="upper left", bbox_to_anchor=(-0.6, -0.02), ncol=1, frameon=False)
 
     # Save figure
     output_dir = config.paths.qa_base_dir / "figures"
