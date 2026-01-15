@@ -33,6 +33,8 @@ class QAPaths:
         Inter-subject correlation output directory.
     stimuli_dir : Path
         Stimuli QA output directory.
+    accuracy_dir : Path
+        Task accuracy QA output directory.
     stimuli_labels_dir : Path
         Stimuli labels input directory.
     """
@@ -46,6 +48,7 @@ class QAPaths:
     motion_dir: Path
     isc_dir: Path
     stimuli_dir: Path
+    accuracy_dir: Path
     stimuli_labels_dir: Path
 
     @classmethod
@@ -121,11 +124,13 @@ class QAPaths:
             motion_subdir = qa_config.get("motion", "motion")
             isc_subdir = qa_config.get("isc", "isc")
             stimuli_subdir = qa_config.get("stimuli", "stimuli")
+            accuracy_subdir = qa_config.get("accuracy", "accuracy")
         else:
             tsnr_subdir = "tsnr"
             motion_subdir = "motion"
             isc_subdir = "isc"
             stimuli_subdir = "stimuli"
+            accuracy_subdir = "accuracy"
 
         # Stimuli labels directory (input)
         stimuli_labels_subdir = dirs.get("stimuli_labels", "stimuli/labels")
@@ -140,6 +145,7 @@ class QAPaths:
             motion_dir=(qa_base_dir / motion_subdir).resolve(),
             isc_dir=(qa_base_dir / isc_subdir).resolve(),
             stimuli_dir=(qa_base_dir / stimuli_subdir).resolve(),
+            accuracy_dir=(qa_base_dir / accuracy_subdir).resolve(),
             stimuli_labels_dir=(derivatives_dir / stimuli_labels_subdir).resolve(),
         )
 
