@@ -21,6 +21,7 @@ directories:
     motion: "motion"
     isc: "isc"
     stimuli: "stimuli"
+    accuracy: "accuracy"
 
   # Stimuli labels directory (under derivatives_dir)
   stimuli_labels: "stimuli/labels"
