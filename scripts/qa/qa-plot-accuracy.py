@@ -223,11 +223,11 @@ def format_accuracy_summary(accuracy_data: dict[str, dict[str, int]]) -> str:
         f"Number of subjects: {n_subjects}",
         f"Number of runs per subject: {n_runs_per_subject}",
         "",
-        "Accuracy Statistics:",
-        f"  Mean across all runs: {np.mean(all_values):.1f}%",
-        f"  Median across all runs: {np.median(all_values):.1f}%",
-        f"  Min: {np.min(all_values)}%",
-        f"  Max: {np.max(all_values)}%",
+        "Accuracy Statistics (per-subject averages):",
+        f"  Mean: {np.mean(subject_means):.1f}%",
+        f"  Median: {np.median(subject_means):.1f}%",
+        f"  Min: {np.min(subject_means):.1f}%",
+        f"  Max: {np.max(subject_means):.1f}%",
         f"  Subjects with 100% accuracy (all runs): {perfect_subjects}/{n_subjects}",
         "",
         "Per-subject breakdown:",
@@ -246,9 +246,9 @@ def format_accuracy_summary(accuracy_data: dict[str, dict[str, int]]) -> str:
             "-" * 60,
             "",
             "Paper-ready text:",
-            f"  Participants achieved a mean accuracy of {np.mean(all_values):.1f}% "
-            f"(median {np.median(all_values):.1f}%, min {np.min(all_values)}%, "
-            f"max {np.max(all_values)}%) on the visual memory task. "
+            f"  Participants achieved a mean accuracy of {np.mean(subject_means):.1f}% "
+            f"(median {np.median(subject_means):.1f}%, min {np.min(subject_means):.1f}%, "
+            f"max {np.max(subject_means):.1f}%) on the visual memory task. "
             f"{perfect_subjects} out of {n_subjects} participants achieved "
             f"100% accuracy across all runs.",
             "",
