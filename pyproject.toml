@@ -81,7 +81,6 @@ target-version = "py39"
 # Exclude archival code that should not be modified
 exclude = [
     "scripts/presentation/**",  # Legacy Python 2 stimulus presentation code
-    "scripts/examples/**",      # Reference scripts from Budapest dataset
 ]
 
 [tool.ruff.lint]
