@@ -6,47 +6,55 @@ This workflow runs the QA pipeline scripts to generate:
 - ISC plots (requires ISC computation first)
 
 Usage:
-    # Run all QA pipelines
-    snakemake --cores 1
+    # Run all QA pipelines (from project root)
+    snakemake --snakefile workflow/Snakefile --cores 1
 
     # Run specific pipeline
-    snakemake motion_plots --cores 1
-    snakemake tsnr_plots --cores 1
-    snakemake isc_plots --cores 1
+    snakemake --snakefile workflow/Snakefile motion_plots --cores 1
+    snakemake --snakefile workflow/Snakefile tsnr_plots --cores 1
+    snakemake --snakefile workflow/Snakefile isc_plots --cores 1
 
     # Dry run to see what would be executed
-    snakemake -n
+    snakemake --snakefile workflow/Snakefile -n
 
     # Process specific subjects (motion/tsnr only)
-    snakemake motion_plots --cores 1 --config subjects="sub-001 sub-002"
+    snakemake --snakefile workflow/Snakefile motion_plots --cores 1 --config subjects="sub-001 sub-002"
 
     # Force rerun of specific target
-    snakemake tsnr_plots --cores 1 --forcerun
+    snakemake --snakefile workflow/Snakefile tsnr_plots --cores 1 --forcerun
 """
 
-import os
+import shutil
+import sys
 from pathlib import Path
-
-# Configuration
-configfile: "workflow/config/config.yaml"
 
 # Get project root (parent of workflow directory)
 PROJECT_ROOT = Path(workflow.basedir).parent
 
-# Python interpreter from virtual environment
-PYTHON = PROJECT_ROOT / ".venv" / "bin" / "python"
+# Configuration - use path relative to workflow directory
+configfile: workflow.source_path("config/config.yaml")
+
+# Python interpreter - prefer active interpreter, fallback to venv
+VENV_PYTHON = PROJECT_ROOT / ".venv" / "bin" / "python"
+if Path(sys.executable).is_file():
+    PYTHON = str(sys.executable)
+elif VENV_PYTHON.is_file():
+    PYTHON = str(VENV_PYTHON)
+else:
+    # Fallback to system python
+    PYTHON = shutil.which("python3") or shutil.which("python") or "python"
 
 # Scripts directory
-SCRIPTS_DIR = PROJECT_ROOT / "scripts" / "qa"
+SCRIPTS_DIR = str(PROJECT_ROOT / "scripts" / "qa")
 
 # Data directories (from qa_config.yaml defaults)
-DATA_DIR = PROJECT_ROOT / "data"
-DERIVATIVES_DIR = DATA_DIR / "derivatives"
-FMRIPREP_DIR = DERIVATIVES_DIR / "fmriprep"
-QA_DIR = DERIVATIVES_DIR / "qa"
-TSNR_DIR = QA_DIR / "tsnr"
-MOTION_DIR = QA_DIR / "motion"
-ISC_DIR = QA_DIR / "isc"
+DATA_DIR = str(PROJECT_ROOT / "data")
+DERIVATIVES_DIR = f"{DATA_DIR}/derivatives"
+FMRIPREP_DIR = f"{DERIVATIVES_DIR}/fmriprep"
+QA_DIR = f"{DERIVATIVES_DIR}/qa"
+TSNR_DIR = f"{QA_DIR}/tsnr"
+MOTION_DIR = f"{QA_DIR}/motion"
+ISC_DIR = f"{QA_DIR}/isc"
 
 
 def get_subjects_arg():
@@ -57,12 +65,16 @@ def get_subjects_arg():
     return ""
 
 
+# Declare rules that don't create output files (run locally, not on cluster)
+localrules: all, clean_motion, clean_tsnr, clean_isc, clean_all
+
+
 # Default target: run all QA pipelines
 rule all:
     input:
-        rules.motion_plots.output if config.get("run_motion", True) else [],
-        rules.tsnr_plots.output if config.get("run_tsnr", True) else [],
-        rules.isc_plots.output if config.get("run_isc", True) else [],
+        f"{MOTION_DIR}/.motion_plots.done" if config.get("run_motion", True) else [],
+        f"{TSNR_DIR}/.tsnr_plots.done" if config.get("run_tsnr", True) else [],
+        f"{ISC_DIR}/.isc_plots.done" if config.get("run_isc", True) else [],
 
 
 # =============================================================================
@@ -73,13 +85,11 @@ rule all:
 rule motion_plots:
     """Generate motion QA plots from fMRIprep confounds."""
     input:
-        script=SCRIPTS_DIR / "qa-plot-motion.py",
-        # Sentinel file to check fMRIprep exists
-        fmriprep=ancient(FMRIPREP_DIR),
+        script=f"{SCRIPTS_DIR}/qa-plot-motion.py",
     output:
-        done=touch(MOTION_DIR / ".motion_plots.done"),
+        done=touch(f"{MOTION_DIR}/.motion_plots.done"),
     log:
-        MOTION_DIR / "logs" / "motion_plots.log",
+        f"{MOTION_DIR}/logs/motion_plots.log",
     params:
         subjects=get_subjects_arg(),
     shell:
@@ -97,12 +107,11 @@ rule motion_plots:
 rule compute_tsnr:
     """Compute tSNR volumes from fMRIprep BOLD data."""
     input:
-        script=SCRIPTS_DIR / "qa-save-tsnr-volume.py",
-        fmriprep=ancient(FMRIPREP_DIR),
+        script=f"{SCRIPTS_DIR}/qa-save-tsnr-volume.py",
     output:
-        done=touch(TSNR_DIR / ".tsnr_computed.done"),
+        done=touch(f"{TSNR_DIR}/.tsnr_computed.done"),
     log:
-        TSNR_DIR / "logs" / "compute_tsnr.log",
+        f"{TSNR_DIR}/logs/compute_tsnr.log",
     params:
         subjects=get_subjects_arg(),
     shell:
@@ -115,16 +124,17 @@ rule compute_tsnr:
 rule tsnr_plots:
     """Generate tSNR QA plots from pre-computed tSNR volumes."""
     input:
-        script=SCRIPTS_DIR / "qa-plot-tsnr.py",
-        tsnr_computed=TSNR_DIR / ".tsnr_computed.done",
+        script=f"{SCRIPTS_DIR}/qa-plot-tsnr.py",
+        tsnr_computed=f"{TSNR_DIR}/.tsnr_computed.done",
     output:
-        done=touch(TSNR_DIR / ".tsnr_plots.done"),
+        done=touch(f"{TSNR_DIR}/.tsnr_plots.done"),
     log:
-        TSNR_DIR / "logs" / "tsnr_plots.log",
+        f"{TSNR_DIR}/logs/tsnr_plots.log",
     params:
         subjects=get_subjects_arg(),
     shell:
         """
+        mkdir -p {TSNR_DIR}/logs
         {PYTHON} {input.script} {params.subjects} 2>&1 | tee {log}
         """
 
@@ -137,12 +147,11 @@ rule tsnr_plots:
 rule compute_isc:
     """Compute inter-subject correlation for visualmemory task."""
     input:
-        script=SCRIPTS_DIR / "qa-save-isc.py",
-        fmriprep=ancient(FMRIPREP_DIR),
+        script=f"{SCRIPTS_DIR}/qa-save-isc.py",
     output:
-        done=touch(ISC_DIR / ".isc_computed.done"),
+        done=touch(f"{ISC_DIR}/.isc_computed.done"),
     log:
-        ISC_DIR / "logs" / "compute_isc.log",
+        f"{ISC_DIR}/logs/compute_isc.log",
     threads:
         workflow.cores
     shell:
@@ -155,14 +164,15 @@ rule compute_isc:
 rule isc_plots:
     """Generate ISC visualization plots."""
     input:
-        script=SCRIPTS_DIR / "qa-plot-isc.py",
-        isc_computed=ISC_DIR / ".isc_computed.done",
+        script=f"{SCRIPTS_DIR}/qa-plot-isc.py",
+        isc_computed=f"{ISC_DIR}/.isc_computed.done",
     output:
-        done=touch(ISC_DIR / ".isc_plots.done"),
+        done=touch(f"{ISC_DIR}/.isc_plots.done"),
     log:
-        ISC_DIR / "logs" / "isc_plots.log",
+        f"{ISC_DIR}/logs/isc_plots.log",
     shell:
         """
+        mkdir -p {ISC_DIR}/logs
         {PYTHON} {input.script} 2>&1 | tee {log}
         """
 
@@ -174,16 +184,17 @@ rule isc_plots:
 rule motion_report:
     """Generate HTML reports for motion QA."""
     input:
-        script=SCRIPTS_DIR / "qa-generate-html-reports-motion.py",
-        plots_done=MOTION_DIR / ".motion_plots.done",
+        script=f"{SCRIPTS_DIR}/qa-generate-html-reports-motion.py",
+        plots_done=f"{MOTION_DIR}/.motion_plots.done",
     output:
-        done=touch(MOTION_DIR / ".motion_reports.done"),
+        done=touch(f"{MOTION_DIR}/.motion_reports.done"),
     log:
-        MOTION_DIR / "logs" / "motion_reports.log",
+        f"{MOTION_DIR}/logs/motion_reports.log",
     params:
         subjects=get_subjects_arg(),
     shell:
         """
+        mkdir -p {MOTION_DIR}/logs
         {PYTHON} {input.script} {params.subjects} 2>&1 | tee {log}
         """
 
@@ -191,16 +202,17 @@ rule motion_report:
 rule tsnr_report:
     """Generate HTML reports for tSNR QA."""
     input:
-        script=SCRIPTS_DIR / "qa-generate-html-reports-tsnr.py",
-        plots_done=TSNR_DIR / ".tsnr_plots.done",
+        script=f"{SCRIPTS_DIR}/qa-generate-html-reports-tsnr.py",
+        plots_done=f"{TSNR_DIR}/.tsnr_plots.done",
     output:
-        done=touch(TSNR_DIR / ".tsnr_reports.done"),
+        done=touch(f"{TSNR_DIR}/.tsnr_reports.done"),
     log:
-        TSNR_DIR / "logs" / "tsnr_reports.log",
+        f"{TSNR_DIR}/logs/tsnr_reports.log",
     params:
         subjects=get_subjects_arg(),
     shell:
         """
+        mkdir -p {TSNR_DIR}/logs
         {PYTHON} {input.script} {params.subjects} 2>&1 | tee {log}
         """
 
@@ -212,16 +224,17 @@ rule tsnr_report:
 rule tsnr_summary:
     """Print tSNR summary statistics."""
     input:
-        script=SCRIPTS_DIR / "print-tsnr-summary.py",
-        tsnr_computed=TSNR_DIR / ".tsnr_computed.done",
+        script=f"{SCRIPTS_DIR}/print-tsnr-summary.py",
+        tsnr_computed=f"{TSNR_DIR}/.tsnr_computed.done",
     output:
-        summary=TSNR_DIR / "tsnr_summary.txt",
+        summary=f"{TSNR_DIR}/tsnr_summary.txt",
     log:
-        TSNR_DIR / "logs" / "tsnr_summary.log",
+        f"{TSNR_DIR}/logs/tsnr_summary.log",
     params:
         subjects=get_subjects_arg(),
     shell:
         """
+        mkdir -p {TSNR_DIR}/logs
         {PYTHON} {input.script} {params.subjects} 2>&1 | tee {log}
         """
 
@@ -229,12 +242,11 @@ rule tsnr_summary:
 rule motion_summary:
     """Print motion summary statistics."""
     input:
-        script=SCRIPTS_DIR / "print-motion-summary.py",
-        fmriprep=ancient(FMRIPREP_DIR),
+        script=f"{SCRIPTS_DIR}/print-motion-summary.py",
     output:
-        summary=MOTION_DIR / "motion_summary.txt",
+        summary=f"{MOTION_DIR}/motion_summary.txt",
     log:
-        MOTION_DIR / "logs" / "motion_summary.log",
+        f"{MOTION_DIR}/logs/motion_summary.log",
     params:
         subjects=get_subjects_arg(),
     shell:

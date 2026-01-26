@@ -12,6 +12,3 @@ run_isc: true
 # Subject filtering (space-separated list, leave empty for all subjects)
 # Example: "sub-001 sub-002 sub-003"
 subjects: ""
-
-# Whether to force regeneration of outputs that already exist
-force: false
