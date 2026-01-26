@@ -55,6 +55,9 @@ dev = [
     "pytest>=6.0",
     "ruff>=0.1.0",
 ]
+workflow = [
+    "snakemake>=8.0.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/mvdoc/hyperface-data-paper"

@@ -1,0 +1,17 @@
+# Snakemake configuration for QA pipelines
+#
+# This config controls which pipelines run and their parameters.
+# The actual data paths are read from the hyperface QA config
+# (src/hyperface/assets/qa_config.yaml).
+
+# Which pipelines to run with the default 'all' target
+run_motion: true
+run_tsnr: true
+run_isc: true
+
+# Subject filtering (space-separated list, leave empty for all subjects)
+# Example: "sub-001 sub-002 sub-003"
+subjects: ""
+
+# Whether to force regeneration of outputs that already exist
+force: false
