@@ -44,7 +44,6 @@ Dependencies are managed using `uv` and specified in `pyproject.toml`.
 hyperface-data-paper/
 ├── data/                    # BIDS dataset (git submodule)
 ├── src/hyperface/          # Analysis package
-├── notebooks/              # QA analysis notebooks
 ├── scripts/                # Processing scripts
 └── docs/                   # This Jupyter Book
 ```
