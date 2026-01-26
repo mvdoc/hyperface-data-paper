@@ -76,18 +76,7 @@ hyperface-data-paper/
 │       ├── freesurfer/     # FreeSurfer outputs
 │       └── qa/             # QA outputs
 ├── src/hyperface/          # Python analysis package
-├── scripts/qa/             # QA pipeline scripts
-├── notebooks/              # Analysis notebooks
-└── docs/                   # Documentation (Jupyter Book)
-```
-
-## Documentation
-
-Build the documentation website:
-
-```bash
-uv sync --extra docs
-jupyter-book build docs/
+└── scripts/qa/             # QA pipeline scripts
 ```
 
 ## Citation

@@ -42,12 +42,6 @@ ruff check src/ scripts/qa/
 ruff format src/ scripts/qa/
 ```
 
-### Documentation
-```bash
-uv sync --extra docs
-jupyter-book build docs/
-```
-
 ## Code Architecture
 
 ### Package Structure (`src/hyperface/`)
