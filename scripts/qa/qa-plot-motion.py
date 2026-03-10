@@ -219,7 +219,7 @@ def create_fd_violin_plots_by_session(
     print("  Creating FD violin plots by session...")
 
     session_data: dict[str | None, list[str]] = {}
-    for confounds_file, session in zip(confounds_files, sessions):
+    for confounds_file, session in zip(confounds_files, sessions, strict=True):
         session_data.setdefault(session, []).append(confounds_file)
 
     for session, session_files in session_data.items():

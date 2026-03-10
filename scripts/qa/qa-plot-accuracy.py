@@ -134,7 +134,7 @@ def plot_accuracy_figure(
 
     # Bar plot for mean accuracy
     x_positions = np.arange(len(subjects))
-    bars = ax.bar(
+    ax.bar(
         x_positions,
         mean_accuracies,
         color=PRIMARY_COLOR,
@@ -145,7 +145,7 @@ def plot_accuracy_figure(
     )
 
     # Scatter plot for individual run values
-    for i, (x_pos, values) in enumerate(zip(x_positions, all_run_values)):
+    for x_pos, values in zip(x_positions, all_run_values, strict=True):
         jitter = np.random.uniform(-0.15, 0.15, len(values))
         ax.scatter(
             [x_pos + j for j in jitter],
@@ -205,7 +205,7 @@ def format_accuracy_summary(accuracy_data: dict[str, dict[str, int]]) -> str:
     subject_means = []
     perfect_subjects = 0
 
-    for subject, runs in accuracy_data.items():
+    for _subject, runs in accuracy_data.items():
         values = list(runs.values())
         all_values.extend(values)
         subject_means.append(np.mean(values))
@@ -247,7 +247,8 @@ def format_accuracy_summary(accuracy_data: dict[str, dict[str, int]]) -> str:
             "",
             "Paper-ready text:",
             f"  Participants achieved a mean accuracy of {np.mean(subject_means):.1f}% "
-            f"(median {np.median(subject_means):.1f}%, min {np.min(subject_means):.1f}%, "
+            f"(median {np.median(subject_means):.1f}%, "
+            f"min {np.min(subject_means):.1f}%, "
             f"max {np.max(subject_means):.1f}%) on the visual memory task. "
             f"{perfect_subjects} out of {n_subjects} participants achieved "
             f"100% accuracy across all runs.",

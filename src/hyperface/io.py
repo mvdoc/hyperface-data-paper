@@ -113,17 +113,10 @@ def load_run_order_config() -> dict:
     FileNotFoundError
         If config file not found in package
     """
-    try:
-        # Python 3.9+
-        config_file = resources.files("hyperface.assets").joinpath(
-            "visualmemory_run_order.yaml"
-        )
-        config_text = config_file.read_text()
-    except AttributeError:
-        # Python 3.8 fallback
-        config_filename = "visualmemory_run_order.yaml"
-        with resources.open_text("hyperface.assets", config_filename) as f:
-            config_text = f.read()
+    config_file = resources.files("hyperface.assets").joinpath(
+        "visualmemory_run_order.yaml"
+    )
+    config_text = config_file.read_text()
 
     return yaml.safe_load(config_text)
 

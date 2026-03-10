@@ -85,14 +85,18 @@ def format_task_summary(task_stats: dict) -> str:
         f"  Number of subjects: {n_subjects}",
         "",
         "  tSNR (temporal signal-to-noise ratio):",
-        f"    Mean across subjects: {np.mean(mean_tsnrs):.1f} ± {np.std(mean_tsnrs):.1f}",
+        f"    Mean across subjects: {np.mean(mean_tsnrs):.1f}"
+        f" ± {np.std(mean_tsnrs):.1f}",
         f"    Median across subjects: {np.median(mean_tsnrs):.1f}",
         f"    Min: {np.min(mean_tsnrs):.1f}",
         f"    Max: {np.max(mean_tsnrs):.1f}",
         "",
         "  Paper-ready text:",
-        f"    The mean tSNR across subjects was {np.mean(mean_tsnrs):.1f} ± {np.std(mean_tsnrs):.1f} "
-        f"(median {np.median(mean_tsnrs):.1f}, min {np.min(mean_tsnrs):.1f}, max {np.max(mean_tsnrs):.1f}).",
+        f"    The mean tSNR across subjects was "
+        f"{np.mean(mean_tsnrs):.1f} ± {np.std(mean_tsnrs):.1f} "
+        f"(median {np.median(mean_tsnrs):.1f}, "
+        f"min {np.min(mean_tsnrs):.1f}, "
+        f"max {np.max(mean_tsnrs):.1f}).",
         "",
     ]
 

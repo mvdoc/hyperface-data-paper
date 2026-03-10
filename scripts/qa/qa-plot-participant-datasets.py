@@ -29,7 +29,6 @@ def main():
 
     # Create binary matrix
     n_participants = len(df)
-    datasets = ["hyperface", "budapest", "identity_decoding"]
     matrix = np.zeros((n_participants, 3), dtype=int)
 
     # All participants have hyperface
