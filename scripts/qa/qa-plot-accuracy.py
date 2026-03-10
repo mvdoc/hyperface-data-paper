@@ -145,7 +145,7 @@ def plot_accuracy_figure(
     )
 
     # Scatter plot for individual run values
-    for x_pos, values in zip(x_positions, all_run_values):
+    for x_pos, values in zip(x_positions, all_run_values, strict=False):
         jitter = np.random.uniform(-0.15, 0.15, len(values))
         ax.scatter(
             [x_pos + j for j in jitter],
