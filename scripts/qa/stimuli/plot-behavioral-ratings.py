@@ -106,7 +106,7 @@ def plot_factor_proportions(df, output_path):
         )
 
         # Add percentage labels above bars
-        for i, (count, bar) in enumerate(zip(counts.values, bars)):
+        for count, bar in zip(counts.values, bars):
             pct = 100 * count / total_n
             ax.text(
                 bar.get_x() + bar.get_width() / 2,
