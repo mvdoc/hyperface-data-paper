@@ -55,16 +55,10 @@ dev = [
     "pytest>=6.0",
     "ruff>=0.1.0",
 ]
-docs = [
-    "jupyter-book>=0.15.0",
-    "sphinx>=4.0.0",
-    "myst-parser>=0.18.0",
-]
 
 [project.urls]
 Homepage = "https://github.com/mvdoc/hyperface-data-paper"
 Repository = "https://github.com/mvdoc/hyperface-data-paper"
-Documentation = "https://mvdoc.github.io/hyperface-data-paper"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -81,7 +75,6 @@ target-version = "py39"
 # Exclude archival code that should not be modified
 exclude = [
     "scripts/presentation/**",  # Legacy Python 2 stimulus presentation code
-    "scripts/examples/**",      # Reference scripts from Budapest dataset
 ]
 
 [tool.ruff.lint]

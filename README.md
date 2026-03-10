@@ -1,102 +1,90 @@
-# Hyperface fMRI Dataset: Quality Assurance & Analysis
+# Hyperface fMRI Dataset
 
-This repository contains preprocessing scripts, quality assurance analyses, and data visualization tools for the Hyperface functional MRI dataset. The Hyperface dataset consists of fMRI data collected while participants viewed dynamic facial stimuli.
-
-## Repository Structure
-
-```
-hyperface-data-paper/
-├── data/                    # BIDS dataset (git submodule/datalad)
-│   ├── [raw BIDS data]     # Raw functional and structural data
-│   └── derivatives/        # BIDS derivatives
-│       ├── fmriprep/      # fMRIprep preprocessed data
-│       ├── freesurfer/    # FreeSurfer outputs
-│       └── qa/            # Quality assurance metrics & figures
-├── src/hyperface/         # Python analysis package
-├── notebooks/             # Jupyter notebooks for QA analyses
-├── scripts/               # Processing scripts
-├── docs/                  # Jupyter Book source
-└── pyproject.toml         # UV dependency management
-```
+This repository contains analysis code and quality assurance tools for the Hyperface fMRI dataset. The dataset consists of fMRI data collected while participants viewed dynamic face stimuli in a visual memory task.
 
 ## Installation
 
-This project uses [uv](https://github.com/astral-sh/uv) for fast, reliable dependency management.
+This project uses [uv](https://github.com/astral-sh/uv) for dependency management.
 
-### Prerequisites
-- Python 3.8+
-- uv (install with: `pip install uv`)
-
-### Setup
 ```bash
 # Clone the repository
 git clone https://github.com/mvdoc/hyperface-data-paper
 cd hyperface-data-paper
 
-# Create virtual environment and install dependencies
+# Create virtual environment and install
 uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+source .venv/bin/activate
 uv sync
 ```
 
-### Data Setup
-The dataset will be managed as a git submodule with datalad:
+## Data Access
+
+The dataset is managed with [datalad](https://www.datalad.org/) and follows the [BIDS](https://bids.neuroimaging.io/) standard:
+
 ```bash
-# Add data submodule (when ready)
-git submodule add <datalad-dataset-url> data
+# Initialize the data submodule
+git submodule update --init
 cd data && datalad get .
 ```
 
-## Quality Assurance Pipeline
+## Quality Assurance
 
-The QA pipeline includes comprehensive analyses:
+The repository includes a comprehensive QA pipeline for assessing data quality.
 
-1. **Motion Assessment**: Head motion parameters during scanning
-2. **Temporal SNR**: Signal quality after confound regression  
-3. **Inter-Subject Correlation**: Stimulus-driven response consistency
-4. **Surface Visualization**: Cortical surface mapping with pycortex
-5. **Outlier Detection**: Identification of problematic scans
+### Motion Analysis
 
-### Running QA Scripts
-
-Scripts are organized by analysis type:
 ```bash
-# Compute tSNR for volume data
-python scripts/quality-assurance/compute-tsnr-volume.py sub-001
+# Generate motion parameter plots
+python scripts/qa/qa-plot-motion.py
 
-# Compute tSNR for surface data  
-python scripts/quality-assurance/compute-tsnr-fsaverage.py sub-001
+# Generate interactive HTML reports
+python scripts/qa/qa-generate-html-reports-motion.py
+```
 
-# Compute inter-subject correlation
-python scripts/quality-assurance/compute-isc-fsaverage.py
+### Temporal SNR Analysis
+
+```bash
+# Compute tSNR maps
+python scripts/qa/qa-save-tsnr-volume.py
+
+# Generate visualizations
+python scripts/qa/qa-plot-tsnr.py
+
+# Generate HTML reports
+python scripts/qa/qa-generate-html-reports-tsnr.py
+```
+
+### Inter-Subject Correlation
+
+```bash
+# Compute ISC
+python scripts/qa/qa-save-isc.py
+
+# Generate surface visualizations
+python scripts/qa/qa-plot-isc.py
 ```
 
 All outputs are saved to `data/derivatives/qa/` following BIDS conventions.
 
-## Documentation Website
+## Repository Structure
 
-This repository generates a Jupyter Book website with QA results:
-
-```bash
-# Install docs dependencies
-uv sync --extra docs
-
-# Build the book
-jupyter-book build docs/
-
-# Serve locally
-jupyter-book build docs/ --builder=html
+```
+hyperface-data-paper/
+├── data/                    # BIDS dataset (datalad)
+│   └── derivatives/
+│       ├── fmriprep/       # Preprocessed fMRI data
+│       ├── freesurfer/     # FreeSurfer outputs
+│       └── qa/             # QA outputs
+├── src/hyperface/          # Python analysis package
+└── scripts/qa/             # QA pipeline scripts
 ```
 
-## Key Features
+## Citation
 
-- **BIDS Compliance**: Follows neuroimaging data standards
-- **Modern Dependency Management**: Uses uv for fast, reproducible environments  
-- **Comprehensive QA**: Motion, tSNR, ISC, outlier detection
-- **Web Documentation**: Interactive Jupyter Book with all analyses
-- **Surface Visualization**: High-quality cortical surface plots
-- **Automated Pipeline**: Scripts for reproducible QA workflow
+If you use this dataset, please cite:
 
-## Contributing
+> [Citation information to be added]
 
-See `TODO.md` for current development tasks and contribution opportunities.
+## License
+
+BSD 2-Clause License. See [LICENSE](LICENSE) for details.
