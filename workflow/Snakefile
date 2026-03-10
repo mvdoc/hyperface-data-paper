@@ -1,0 +1,284 @@
+"""Snakemake workflow for QA pipeline plots.
+
+This workflow runs the QA pipeline scripts to generate:
+- Motion plots (directly from fMRIprep confounds)
+- tSNR plots (requires tSNR computation first)
+- ISC plots (requires ISC computation first)
+
+Usage:
+    # Run all QA pipelines (from project root)
+    snakemake --snakefile workflow/Snakefile --cores 1
+
+    # Run specific pipeline
+    snakemake --snakefile workflow/Snakefile motion_plots --cores 1
+    snakemake --snakefile workflow/Snakefile tsnr_plots --cores 1
+    snakemake --snakefile workflow/Snakefile isc_plots --cores 1
+
+    # Dry run to see what would be executed
+    snakemake --snakefile workflow/Snakefile -n
+
+    # Process specific subjects (motion/tsnr only)
+    snakemake --snakefile workflow/Snakefile motion_plots --cores 1 --config subjects="sub-001 sub-002"
+
+    # Force rerun of specific target
+    snakemake --snakefile workflow/Snakefile tsnr_plots --cores 1 --forcerun
+"""
+
+import shutil
+import sys
+from pathlib import Path
+
+# Get project root (parent of workflow directory)
+PROJECT_ROOT = Path(workflow.basedir).parent
+
+# Configuration - use path relative to workflow directory
+configfile: workflow.source_path("config/config.yaml")
+
+# Python interpreter - prefer active interpreter, fallback to venv
+VENV_PYTHON = PROJECT_ROOT / ".venv" / "bin" / "python"
+if Path(sys.executable).is_file():
+    PYTHON = str(sys.executable)
+elif VENV_PYTHON.is_file():
+    PYTHON = str(VENV_PYTHON)
+else:
+    # Fallback to system python
+    PYTHON = shutil.which("python3") or shutil.which("python") or "python"
+
+# Scripts directory
+SCRIPTS_DIR = str(PROJECT_ROOT / "scripts" / "qa")
+
+# Data directories (from qa_config.yaml defaults)
+DATA_DIR = str(PROJECT_ROOT / "data")
+DERIVATIVES_DIR = f"{DATA_DIR}/derivatives"
+FMRIPREP_DIR = f"{DERIVATIVES_DIR}/fmriprep"
+QA_DIR = f"{DERIVATIVES_DIR}/qa"
+TSNR_DIR = f"{QA_DIR}/tsnr"
+MOTION_DIR = f"{QA_DIR}/motion"
+ISC_DIR = f"{QA_DIR}/isc"
+
+
+def get_subjects_arg():
+    """Get --subjects argument if configured."""
+    subjects = config.get("subjects", "")
+    if subjects:
+        return f"--subjects {subjects}"
+    return ""
+
+
+# Declare rules that don't create output files (run locally, not on cluster)
+localrules: all, clean_motion, clean_tsnr, clean_isc, clean_all
+
+
+# Default target: run all QA pipelines
+rule all:
+    input:
+        f"{MOTION_DIR}/.motion_plots.done" if config.get("run_motion", True) else [],
+        f"{TSNR_DIR}/.tsnr_plots.done" if config.get("run_tsnr", True) else [],
+        f"{ISC_DIR}/.isc_plots.done" if config.get("run_isc", True) else [],
+
+
+# =============================================================================
+# Motion Plots Pipeline
+# =============================================================================
+# Motion plots read directly from fMRIprep confounds files (no pre-computation)
+
+rule motion_plots:
+    """Generate motion QA plots from fMRIprep confounds."""
+    input:
+        script=f"{SCRIPTS_DIR}/qa-plot-motion.py",
+    output:
+        done=touch(f"{MOTION_DIR}/.motion_plots.done"),
+    log:
+        f"{MOTION_DIR}/logs/motion_plots.log",
+    params:
+        subjects=get_subjects_arg(),
+    shell:
+        """
+        mkdir -p {MOTION_DIR}/logs
+        {PYTHON} {input.script} {params.subjects} 2>&1 | tee {log}
+        """
+
+
+# =============================================================================
+# tSNR Pipeline
+# =============================================================================
+# tSNR plots require pre-computed tSNR volumes
+
+rule compute_tsnr:
+    """Compute tSNR volumes from fMRIprep BOLD data."""
+    input:
+        script=f"{SCRIPTS_DIR}/qa-save-tsnr-volume.py",
+    output:
+        done=touch(f"{TSNR_DIR}/.tsnr_computed.done"),
+    log:
+        f"{TSNR_DIR}/logs/compute_tsnr.log",
+    params:
+        subjects=get_subjects_arg(),
+    shell:
+        """
+        mkdir -p {TSNR_DIR}/logs
+        {PYTHON} {input.script} {params.subjects} 2>&1 | tee {log}
+        """
+
+
+rule tsnr_plots:
+    """Generate tSNR QA plots from pre-computed tSNR volumes."""
+    input:
+        script=f"{SCRIPTS_DIR}/qa-plot-tsnr.py",
+        tsnr_computed=f"{TSNR_DIR}/.tsnr_computed.done",
+    output:
+        done=touch(f"{TSNR_DIR}/.tsnr_plots.done"),
+    log:
+        f"{TSNR_DIR}/logs/tsnr_plots.log",
+    params:
+        subjects=get_subjects_arg(),
+    shell:
+        """
+        mkdir -p {TSNR_DIR}/logs
+        {PYTHON} {input.script} {params.subjects} 2>&1 | tee {log}
+        """
+
+
+# =============================================================================
+# ISC Pipeline
+# =============================================================================
+# ISC plots require pre-computed ISC data
+
+rule compute_isc:
+    """Compute inter-subject correlation for visualmemory task."""
+    input:
+        script=f"{SCRIPTS_DIR}/qa-save-isc.py",
+    output:
+        done=touch(f"{ISC_DIR}/.isc_computed.done"),
+    log:
+        f"{ISC_DIR}/logs/compute_isc.log",
+    threads:
+        workflow.cores
+    shell:
+        """
+        mkdir -p {ISC_DIR}/logs
+        {PYTHON} {input.script} --n-jobs {threads} 2>&1 | tee {log}
+        """
+
+
+rule isc_plots:
+    """Generate ISC visualization plots."""
+    input:
+        script=f"{SCRIPTS_DIR}/qa-plot-isc.py",
+        isc_computed=f"{ISC_DIR}/.isc_computed.done",
+    output:
+        done=touch(f"{ISC_DIR}/.isc_plots.done"),
+    log:
+        f"{ISC_DIR}/logs/isc_plots.log",
+    shell:
+        """
+        mkdir -p {ISC_DIR}/logs
+        {PYTHON} {input.script} 2>&1 | tee {log}
+        """
+
+
+# =============================================================================
+# HTML Reports (optional, after plots)
+# =============================================================================
+
+rule motion_report:
+    """Generate HTML reports for motion QA."""
+    input:
+        script=f"{SCRIPTS_DIR}/qa-generate-html-reports-motion.py",
+        plots_done=f"{MOTION_DIR}/.motion_plots.done",
+    output:
+        done=touch(f"{MOTION_DIR}/.motion_reports.done"),
+    log:
+        f"{MOTION_DIR}/logs/motion_reports.log",
+    params:
+        subjects=get_subjects_arg(),
+    shell:
+        """
+        mkdir -p {MOTION_DIR}/logs
+        {PYTHON} {input.script} {params.subjects} 2>&1 | tee {log}
+        """
+
+
+rule tsnr_report:
+    """Generate HTML reports for tSNR QA."""
+    input:
+        script=f"{SCRIPTS_DIR}/qa-generate-html-reports-tsnr.py",
+        plots_done=f"{TSNR_DIR}/.tsnr_plots.done",
+    output:
+        done=touch(f"{TSNR_DIR}/.tsnr_reports.done"),
+    log:
+        f"{TSNR_DIR}/logs/tsnr_reports.log",
+    params:
+        subjects=get_subjects_arg(),
+    shell:
+        """
+        mkdir -p {TSNR_DIR}/logs
+        {PYTHON} {input.script} {params.subjects} 2>&1 | tee {log}
+        """
+
+
+# =============================================================================
+# Summary Statistics (optional)
+# =============================================================================
+
+rule tsnr_summary:
+    """Print tSNR summary statistics."""
+    input:
+        script=f"{SCRIPTS_DIR}/print-tsnr-summary.py",
+        tsnr_computed=f"{TSNR_DIR}/.tsnr_computed.done",
+    output:
+        summary=f"{TSNR_DIR}/tsnr_summary.txt",
+    log:
+        f"{TSNR_DIR}/logs/tsnr_summary.log",
+    params:
+        subjects=get_subjects_arg(),
+    shell:
+        """
+        mkdir -p {TSNR_DIR}/logs
+        {PYTHON} {input.script} {params.subjects} 2>&1 | tee {log}
+        """
+
+
+rule motion_summary:
+    """Print motion summary statistics."""
+    input:
+        script=f"{SCRIPTS_DIR}/print-motion-summary.py",
+    output:
+        summary=f"{MOTION_DIR}/motion_summary.txt",
+    log:
+        f"{MOTION_DIR}/logs/motion_summary.log",
+    params:
+        subjects=get_subjects_arg(),
+    shell:
+        """
+        mkdir -p {MOTION_DIR}/logs
+        {PYTHON} {input.script} {params.subjects} 2>&1 | tee {log}
+        """
+
+
+# =============================================================================
+# Cleanup Rules
+# =============================================================================
+
+rule clean_motion:
+    """Remove motion QA outputs (regenerate with snakemake motion_plots)."""
+    shell:
+        "rm -rf {MOTION_DIR}"
+
+
+rule clean_tsnr:
+    """Remove tSNR QA outputs (regenerate with snakemake tsnr_plots)."""
+    shell:
+        "rm -rf {TSNR_DIR}"
+
+
+rule clean_isc:
+    """Remove ISC QA outputs (regenerate with snakemake isc_plots)."""
+    shell:
+        "rm -rf {ISC_DIR}"
+
+
+rule clean_all:
+    """Remove all QA outputs."""
+    shell:
+        "rm -rf {QA_DIR}"
