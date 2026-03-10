@@ -65,7 +65,7 @@ def load_and_process_subject(
     events = load_events(subject, task="visualmemory", data_dir=data_dir)
 
     processed_runs = []
-    for data, evt in zip(responses, events, strict=False):
+    for data, evt in zip(responses, events, strict=True):
         n_trs = data.shape[0]
         clip_mask = get_clip_tr_mask(evt, n_trs, tr=tr)
         data_clips = data[clip_mask]
@@ -111,7 +111,7 @@ def main():
     n_trs_list = [d.shape[0] for d in subjects_data]
     if len(set(n_trs_list)) > 1:
         print(f"\nERROR: Inconsistent TR counts: {set(n_trs_list)}")
-        for subj_id, n_trs in zip(subject_ids, n_trs_list, strict=False):
+        for subj_id, n_trs in zip(subject_ids, n_trs_list, strict=True):
             print(f"  {subj_id}: {n_trs}")
         return 1
 

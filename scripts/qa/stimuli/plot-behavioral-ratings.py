@@ -90,7 +90,7 @@ def plot_factor_proportions(df, output_path):
 
     total_n = len(df)
 
-    for ax, (factor, config) in zip(axes, FACTOR_CONFIG.items(), strict=False):
+    for ax, (factor, config) in zip(axes, FACTOR_CONFIG.items(), strict=True):
         # Get counts in specified order
         counts = df[factor].value_counts()
         order = [lvl for lvl in config["order"] if lvl in counts.index]
@@ -106,7 +106,7 @@ def plot_factor_proportions(df, output_path):
         )
 
         # Add percentage labels above bars
-        for count, bar in zip(counts.values, bars, strict=False):
+        for count, bar in zip(counts.values, bars, strict=True):
             pct = 100 * count / total_n
             ax.text(
                 bar.get_x() + bar.get_width() / 2,

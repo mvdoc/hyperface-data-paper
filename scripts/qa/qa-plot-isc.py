@@ -101,7 +101,7 @@ def print_summary_stats(isc_data: list[np.ndarray], subject_ids: list[str]) -> N
     print(header)
     print("-" * 60)
 
-    for subject_id, isc in zip(subject_ids, isc_data, strict=False):
+    for subject_id, isc in zip(subject_ids, isc_data, strict=True):
         valid = isc[np.isfinite(isc)]
         vals = [valid.mean(), np.median(valid), valid.std(), valid.min(), valid.max()]
         row = f"{subject_id:<15} " + " ".join(f"{v:>8.4f}" for v in vals)
@@ -173,7 +173,7 @@ def main():
 
     # Create individual subject surface plots
     print("\nCreating individual subject surface plots...")
-    for subject_id, isc in zip(subject_ids, isc_data, strict=False):
+    for subject_id, isc in zip(subject_ids, isc_data, strict=True):
         subject_path = figures_dir / f"{subject_id}_desc-isc_{plot_type}.png"
         create_fsaverage6_plot(
             isc,
