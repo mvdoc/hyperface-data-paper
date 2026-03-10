@@ -72,3 +72,6 @@ private
 
 # NFS hanging stuff
 .nfs*
+
+# Node
+node_modules/
