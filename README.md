@@ -19,12 +19,24 @@ uv sync
 
 ## Data Access
 
-The dataset is managed with [datalad](https://www.datalad.org/) and follows the [BIDS](https://bids.neuroimaging.io/) standard:
+The dataset is available on [OpenNeuro](https://openneuro.org/) and follows the [BIDS](https://bids.neuroimaging.io/) standard:
+
+- **Raw data**: [ds007329](https://openneuro.org/datasets/ds007329)
+- **fMRIPrep derivatives**: [ds007384](https://openneuro.org/datasets/ds007384)
+- **FreeSurfer derivatives**: [ds007378](https://openneuro.org/datasets/ds007378)
+
+To download the data using [datalad](https://www.datalad.org/):
 
 ```bash
-# Initialize the data submodule
-git submodule update --init
-cd data && datalad get .
+# Install the raw data (included as a git submodule)
+datalad install -r .
+
+# Install the derivative datasets
+datalad install -s https://github.com/OpenNeuroDatasets/ds007384.git data/derivatives/fmriprep
+datalad install -s https://github.com/OpenNeuroDatasets/ds007378.git data/derivatives/freesurfer
+
+# Download specific files as needed
+datalad get data/sub-sid000005/
 ```
 
 ## Quality Assurance
