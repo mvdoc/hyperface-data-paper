@@ -447,18 +447,6 @@ def create_group_fd_violin_plots_by_task(
             y_max = 1.0
         ax.set_ylim(0, y_max)
 
-        # Add FD outlier percentage labels above each violin (same y-line)
-        # y_label_pos = y_max * 0.92
-        # for i, pct in enumerate(outlier_percentages):
-        #     ax.text(
-        #         positions[i],
-        #         y_label_pos,
-        #         f"{pct:.1f}%",
-        #         ha="center",
-        #         va="top",
-        #         fontsize=16,
-        #     )
-
         ax.set_xticks(positions)
         ax.set_xticklabels(subject_labels, fontsize=14, rotation=45, ha="right")
         ax.tick_params(axis="y", labelsize=14)

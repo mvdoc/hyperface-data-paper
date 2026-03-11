@@ -242,8 +242,6 @@ def create_fsaverage6_plot(
     if has_display():
         # Inflated 3D views (requires display/WebGL)
         params = params_fsaverage_allviews
-        # params = cortex.export.params_flatmap_inflated_lateral_medial_ventral
-        # windowsize = (3200, 1800)
         viewer_params = {
             "labels_visible": [],
             "overlays_visible": ["rois", ],
