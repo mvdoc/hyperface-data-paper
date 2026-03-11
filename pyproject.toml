@@ -8,8 +8,8 @@ version = "0.1.0"
 description = "Analysis code for the Hyperface fMRI dataset"
 authors = [
     {name = "Matteo Visconti di Oleggio Castello", email = "mvdoc@berkeley.edu"},
-    {name = "Jiahui Guo", email = "jiahui.guo@utdallas.edu"},
-    {name = "Feilong Ma", email = "feilong.ma@dartmouth.edu"}
+    {name = "Guo Jiahui", email = "jiahui.guo@utdallas.edu"},
+    {name = "Ma Feilong", email = "feilong.ma@dartmouth.edu"}
 ]
 readme = "README.md"
 license = {file = "LICENSE"}
