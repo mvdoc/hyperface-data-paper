@@ -23,7 +23,11 @@ authors:
   - family-names: Gobbini
     given-names: Maria Ida
     orcid: "https://orcid.org/0000-0001-6727-7934"
+doi: "10.5281/zenodo.19038401"
 identifiers:
+  - type: doi
+    value: "10.5281/zenodo.19038401"
+    description: "Zenodo archive"
   - type: doi
     value: "10.64898/2026.03.11.711073"
     description: "bioRxiv preprint"
