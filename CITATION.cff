@@ -1,0 +1,56 @@
+cff-version: 1.2.0
+title: "Hyperface: a naturalistic fMRI dataset for investigating human face processing"
+message: "If you use this software or dataset, please cite it using the metadata from this file."
+type: dataset
+authors:
+  - family-names: Visconti di Oleggio Castello
+    given-names: Matteo
+    orcid: "https://orcid.org/0000-0001-7931-5272"
+    email: mvdoc@berkeley.edu
+  - family-names: Guo
+    given-names: Jiahui
+    email: jiahui.guo@utdallas.edu
+  - family-names: Ma
+    given-names: Feilong
+    email: feilong.ma@dartmouth.edu
+  - family-names: de Villemejane
+    given-names: Manon
+  - family-names: Haxby
+    given-names: James V.
+  - family-names: Gobbini
+    given-names: M. Ida
+identifiers:
+  - type: doi
+    value: "10.64898/2026.03.11.711073"
+    description: "bioRxiv preprint"
+repository-code: "https://github.com/mvdoc/hyperface-data-paper"
+url: "https://openneuro.org/datasets/ds007329"
+license: BSD-2-Clause
+keywords:
+  - fMRI
+  - neuroimaging
+  - face processing
+  - naturalistic stimuli
+  - BIDS
+  - OpenNeuro
+preferred-citation:
+  type: article
+  title: "Hyperface: a naturalistic fMRI dataset for investigating human face processing"
+  authors:
+    - family-names: Visconti di Oleggio Castello
+      given-names: Matteo
+    - family-names: Guo
+      given-names: Jiahui
+      name-particle: ""
+    - family-names: Ma
+      given-names: Feilong
+      name-particle: ""
+    - family-names: de Villemejane
+      given-names: Manon
+    - family-names: Haxby
+      given-names: James V.
+    - family-names: Gobbini
+      given-names: M. Ida
+  doi: "10.64898/2026.03.11.711073"
+  journal: "bioRxiv"
+  year: 2026

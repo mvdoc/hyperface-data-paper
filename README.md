@@ -98,7 +98,7 @@ hyperface-data-paper/
 
 If you use this dataset, please cite:
 
-> [Citation information to be added]
+> Visconti di Oleggio Castello, M., Jiahui, G., Feilong, M., de Villemejane, M., Haxby, J. V., & Gobbini, M. I. (2026). Hyperface: a naturalistic fMRI dataset for investigating human face processing. *bioRxiv*. https://doi.org/10.64898/2026.03.11.711073
 
 ## License
 
