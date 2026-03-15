@@ -1,5 +1,7 @@
 # Hyperface fMRI Dataset
 
+[![DOI](https://zenodo.org/badge/1047675518.svg)](https://doi.org/10.5281/zenodo.19038401)
+
 This repository contains analysis code and quality assurance tools for the Hyperface fMRI dataset. The dataset consists of fMRI data collected while participants viewed dynamic face stimuli in a visual memory task.
 
 ## Installation
