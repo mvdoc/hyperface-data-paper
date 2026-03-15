@@ -28,12 +28,8 @@ The dataset is available on [OpenNeuro](https://openneuro.org/) and follows the 
 To download the data using [datalad](https://www.datalad.org/):
 
 ```bash
-# Install the raw data (included as a git submodule)
-datalad install -r .
-
-# Install the derivative datasets
-datalad install -s https://github.com/OpenNeuroDatasets/ds007384.git data/derivatives/fmriprep
-datalad install -s https://github.com/OpenNeuroDatasets/ds007378.git data/derivatives/freesurfer
+# Install the dataset and all derivatives (fMRIPrep, FreeSurfer) from OpenNeuro
+datalad install -r data
 
 # Download specific files as needed
 datalad get data/sub-sid000005/
