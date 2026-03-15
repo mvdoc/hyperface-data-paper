@@ -1,5 +1,5 @@
 {
-    "title": "Hyperface: a naturalistic fMRI dataset for investigating human face processing",
+    "title": "Code for Hyperface: a naturalistic fMRI dataset for investigating human face processing",
     "description": "Analysis code and quality assurance tools for the Hyperface fMRI dataset. The dataset consists of fMRI data collected while participants viewed dynamic face stimuli.",
     "creators": [
         {
