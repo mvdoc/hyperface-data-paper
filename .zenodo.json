@@ -9,21 +9,26 @@
         },
         {
             "name": "Guo, Jiahui",
+            "orcid": "0000-0002-1528-9025",
             "affiliation": "University of Texas at Dallas"
         },
         {
             "name": "Ma, Feilong",
+            "orcid": "0000-0002-0681-1651",
             "affiliation": "Dartmouth College"
         },
         {
-            "name": "de Villemejane, Manon"
+            "name": "de Villemejane, Manon",
+            "affiliation": "Dartmouth College"
         },
         {
             "name": "Haxby, James V.",
+            "orcid": "0000-0002-6558-3118",
             "affiliation": "Dartmouth College"
         },
         {
-            "name": "Gobbini, M. Ida"
+            "name": "Gobbini, Maria Ida",
+            "orcid": "0000-0001-6727-7934"
         }
     ],
     "license": "BSD-2-Clause",

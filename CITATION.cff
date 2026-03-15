@@ -9,16 +9,20 @@ authors:
     email: mvdoc@berkeley.edu
   - family-names: Guo
     given-names: Jiahui
+    orcid: "https://orcid.org/0000-0002-1528-9025"
     email: jiahui.guo@utdallas.edu
   - family-names: Ma
     given-names: Feilong
+    orcid: "https://orcid.org/0000-0002-0681-1651"
     email: feilong.ma@dartmouth.edu
   - family-names: de Villemejane
     given-names: Manon
   - family-names: Haxby
     given-names: James V.
+    orcid: "https://orcid.org/0000-0002-6558-3118"
   - family-names: Gobbini
-    given-names: M. Ida
+    given-names: Maria Ida
+    orcid: "https://orcid.org/0000-0001-6727-7934"
 identifiers:
   - type: doi
     value: "10.64898/2026.03.11.711073"
@@ -41,16 +45,14 @@ preferred-citation:
       given-names: Matteo
     - family-names: Guo
       given-names: Jiahui
-      name-particle: ""
     - family-names: Ma
       given-names: Feilong
-      name-particle: ""
     - family-names: de Villemejane
       given-names: Manon
     - family-names: Haxby
       given-names: James V.
     - family-names: Gobbini
-      given-names: M. Ida
+      given-names: Maria Ida
   doi: "10.64898/2026.03.11.711073"
   journal: "bioRxiv"
   year: 2026
