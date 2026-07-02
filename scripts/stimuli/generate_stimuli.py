@@ -72,7 +72,8 @@ def download_source(url: str, cache: Path) -> Path | None:
 def crop_filter(row: dict) -> str | None:
     """ffmpeg crop expression from the normalized box, or None for a full frame."""
     try:
-        x0, y0, x1, y1 = (float(row[k]) for k in ("crop_x0", "crop_y0", "crop_x1", "crop_y1"))
+        keys = ("crop_x0", "crop_y0", "crop_x1", "crop_y1")
+        x0, y0, x1, y1 = (float(row[k]) for k in keys)
     except (KeyError, ValueError):
         return None
     x0, y0 = max(0.0, x0), max(0.0, y0)
@@ -108,9 +109,9 @@ def main() -> int:
     ap.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     ap.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
     ap.add_argument("--video-cache", type=Path, default=DEFAULT_VIDEO_CACHE)
-    ap.add_argument("--only", nargs="+", help="regenerate only these stimulus filenames")
+    ap.add_argument("--only", nargs="+", help="regenerate only these stimuli")
     ap.add_argument("--limit", type=int, help="stop after N stimuli (smoke test)")
-    ap.add_argument("--overwrite", action="store_true", help="re-cut clips that already exist")
+    ap.add_argument("--overwrite", action="store_true", help="re-cut existing clips")
     args = ap.parse_args()
 
     for tool in ("ffmpeg", "yt-dlp"):

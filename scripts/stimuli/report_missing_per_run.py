@@ -2,12 +2,12 @@
 """How many stimulus clips to expect MISSING per fMRI run if you regenerate the stimuli
 by downloading the source videos from YouTube *today*.
 
-This is reader-facing: a clip is REPRODUCIBLE only if its source video is still on YouTube
-(`youtube_available=yes`) AND it reproduces the original (`verified` = parity or close).
-Otherwise it is MISSING, for one of:
+This is reader-facing: a clip is REPRODUCIBLE only if its source video is still
+on YouTube (`youtube_available=yes`) AND it reproduces the original (`verified` =
+parity or close). Otherwise it is MISSING, for one of:
   - youtube_deleted : the source YouTube video has been removed (you cannot download it)
   - no_source       : the clip's source was never recovered (no URL)
-  - drift_corrupt   : the video is still up but its content drifted / can't be reproduced
+  - drift_corrupt   : the video is still up but its content drifted / can't reproduce
 
 Note: many clips whose source video is now deleted were still verified as reproducing
 (the authors regenerated them from an archived copy), but a NEW download cannot obtain
@@ -23,6 +23,7 @@ import sys
 from collections import defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+COLS = ('n', 'parity', 'close', 'deleted', 'no_source', 'drift')
 
 
 def main():
@@ -34,7 +35,7 @@ def main():
         print(f"error: manifest not found: {a.manifest}", file=sys.stderr)
         return
 
-    by_run = defaultdict(lambda: dict(n=0, parity=0, close=0, deleted=0, no_source=0, drift=0))
+    by_run = defaultdict(lambda: dict.fromkeys(COLS, 0))
     with open(a.manifest, newline='', encoding='utf-8') as fh:
         rows = list(csv.DictReader(fh, delimiter='\t'))
     for r in rows:
@@ -47,15 +48,15 @@ def main():
             d['parity'] += 1
         elif up and v == 'close':
             d['close'] += 1
-        elif up:                       # on YouTube but can't reproduce (drift / corrupt)
+        elif up:            # on YouTube but can't reproduce (drift / corrupt)
             d['drift'] += 1
-        elif has_url:                  # had a URL, video now deleted
+        elif has_url:       # had a URL, video now deleted
             d['deleted'] += 1
-        else:                          # source never recovered
+        else:               # source never recovered
             d['no_source'] += 1
 
     runs = sorted(by_run, key=lambda x: int(x) if str(x).isdigit() else 99)
-    tot = dict(n=0, parity=0, close=0, deleted=0, no_source=0, drift=0)
+    tot = dict.fromkeys(COLS, 0)
     print('Per-run clips to expect MISSING if you regenerate from YouTube today.')
     print('  reproducible = source still on YouTube AND matches the original')
     print('  (parity = frame-for-frame, close = same clip minor residual).\n')
@@ -66,19 +67,24 @@ def main():
         miss = d['deleted'] + d['no_source'] + d['drift']
         for k in tot:
             tot[k] += d[k]
-        print(f"  {str(run):>4} {d['n']:>4} {d['parity']:>7} {d['close']:>6} {miss:>8} "
-              f"{d['deleted']:>8} {d['no_source']:>7} {d['drift']:>6} {100.0*miss/d['n']:>6.1f}")
+        print(f"  {str(run):>4} {d['n']:>4} {d['parity']:>7} {d['close']:>6} "
+              f"{miss:>8} {d['deleted']:>8} {d['no_source']:>7} {d['drift']:>6} "
+              f"{100.0 * miss / d['n']:>6.1f}")
     n = tot['n']
     miss = tot['deleted'] + tot['no_source'] + tot['drift']
     ok = tot['parity'] + tot['close']
-    print(f"  {'ALL':>4} {n:>4} {tot['parity']:>7} {tot['close']:>6} {miss:>8} "
-          f"{tot['deleted']:>8} {tot['no_source']:>7} {tot['drift']:>6} {100.0*miss/n:>6.1f}")
+    print(f"  {'ALL':>4} {n:>4} {tot['parity']:>7} {tot['close']:>6} "
+          f"{miss:>8} {tot['deleted']:>8} {tot['no_source']:>7} {tot['drift']:>6} "
+          f"{100.0 * miss / n:>6.1f}")
     print(f"\n  Downloading from YouTube today you can reproduce {ok}/{n} clips "
-          f"({100.0*ok/n:.1f}%): {tot['parity']} frame-exact + {tot['close']} near-exact.")
-    print(f"  {miss}/{n} ({100.0*miss/n:.1f}%) are MISSING: {tot['deleted']} source video "
-          f"deleted, {tot['no_source']} no source on record, {tot['drift']} drifted/corrupt.")
-    print(f"  (The {tot['deleted']} deleted-source clips were verified by the authors from an "
-          f"archived copy, but a fresh download can no longer obtain them.)")
+          f"({100.0 * ok / n:.1f}%): {tot['parity']} frame-exact + "
+          f"{tot['close']} near-exact.")
+    print(f"  {miss}/{n} ({100.0 * miss / n:.1f}%) are MISSING: "
+          f"{tot['deleted']} source video deleted, {tot['no_source']} no source "
+          f"on record, {tot['drift']} drifted/corrupt.")
+    print(f"  (The {tot['deleted']} deleted-source clips were verified by the "
+          f"authors from an archived copy, but a fresh download can no longer "
+          f"obtain them.)")
 
 
 if __name__ == '__main__':
