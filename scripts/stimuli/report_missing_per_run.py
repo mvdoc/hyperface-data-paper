@@ -19,6 +19,7 @@ source videos are taken down.
 import argparse
 import csv
 import os
+import sys
 from collections import defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -29,8 +30,14 @@ def main():
     ap.add_argument('--manifest', default=os.path.join(HERE, 'stimulus_sources.tsv'))
     a = ap.parse_args()
 
+    if not os.path.exists(a.manifest):
+        print(f"error: manifest not found: {a.manifest}", file=sys.stderr)
+        return
+
     by_run = defaultdict(lambda: dict(n=0, parity=0, close=0, deleted=0, no_source=0, drift=0))
-    for r in csv.DictReader(open(a.manifest), delimiter='\t'):
+    with open(a.manifest, newline='', encoding='utf-8') as fh:
+        rows = list(csv.DictReader(fh, delimiter='\t'))
+    for r in rows:
         d = by_run[r.get('run', '')]
         d['n'] += 1
         up = r.get('youtube_available') == 'yes'

@@ -26,6 +26,7 @@ Requires ``ffmpeg`` on PATH plus ``numpy`` and ``scipy``.
 """
 import argparse
 import csv
+import shutil
 import sys
 from pathlib import Path
 
@@ -56,13 +57,20 @@ def main() -> int:
     ap.add_argument("--quiet", action="store_true", help="only print the summary")
     args = ap.parse_args()
 
+    if not shutil.which("ffmpeg"):
+        print("error: 'ffmpeg' not found on PATH", file=sys.stderr)
+        return 2
+    if not args.manifest.exists():
+        print(f"error: manifest not found: {args.manifest}", file=sys.stderr)
+        return 2
     if not args.fingerprints.exists():
         print(f"error: fingerprints file not found: {args.fingerprints}\n"
               "(authors build it with build_fingerprints.py; ships with the manifest)",
               file=sys.stderr)
         return 2
 
-    rows = list(csv.DictReader(open(args.manifest), delimiter="\t"))
+    with open(args.manifest, newline="", encoding="utf-8") as fh:
+        rows = list(csv.DictReader(fh, delimiter="\t"))
     fps = load_fingerprints(args.fingerprints)
     if args.only:
         want = set(args.only)
@@ -98,7 +106,7 @@ def main() -> int:
             print(f"{stim:24s} sim={s}  {v}")
 
     if args.out:
-        with open(args.out, "w", newline="") as fh:
+        with open(args.out, "w", newline="", encoding="utf-8") as fh:
             w = csv.writer(fh, delimiter="\t")
             w.writerow(["stimulus", "manifest_verified", "similarity", "verdict"])
             for stim, mv, sim, v in report:
