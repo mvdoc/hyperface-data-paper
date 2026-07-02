@@ -15,6 +15,7 @@ footage, so it is safe to publish.
 """
 import argparse
 import csv
+import shutil
 import sys
 from pathlib import Path
 
@@ -35,7 +36,15 @@ def main() -> int:
     ap.add_argument("--only", nargs="+", help="fingerprint only these stimuli")
     args = ap.parse_args()
 
-    rows = list(csv.DictReader(open(args.manifest), delimiter="\t"))
+    if not shutil.which("ffmpeg"):
+        print("error: 'ffmpeg' not found on PATH", file=sys.stderr)
+        return 1
+    if not args.manifest.exists():
+        print(f"error: manifest not found: {args.manifest}", file=sys.stderr)
+        return 1
+
+    with open(args.manifest, newline="", encoding="utf-8") as fh:
+        rows = list(csv.DictReader(fh, delimiter="\t"))
     if args.only:
         want = set(args.only)
         rows = [r for r in rows if r["stimulus"] in want]
@@ -61,7 +70,7 @@ def main() -> int:
               f"decode-fail); refusing to overwrite {args.out}", file=sys.stderr)
         return 1
 
-    with open(args.out, "w", newline="") as fh:
+    with open(args.out, "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh, delimiter="\t")
         w.writerow(["stimulus", "frame_phash"])
         w.writerows(out_rows)

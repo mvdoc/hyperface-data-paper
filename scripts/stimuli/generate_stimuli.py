@@ -26,9 +26,11 @@ Examples
 """
 import argparse
 import csv
+import shutil
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_MANIFEST = HERE / "stimulus_sources.tsv"
@@ -37,6 +39,15 @@ DEFAULT_VIDEO_CACHE = HERE / "source_videos"
 
 
 def video_id(url: str) -> str:
+    """Extract the YouTube video id from a watch or youtu.be URL."""
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").removeprefix("www.")
+    if host == "youtu.be":
+        return parsed.path.lstrip("/")
+    if host in ("youtube.com", "m.youtube.com"):
+        vals = parse_qs(parsed.query).get("v")
+        if vals:
+            return vals[0]
     return url.rsplit("v=", 1)[-1]
 
 
@@ -102,14 +113,23 @@ def main() -> int:
     ap.add_argument("--overwrite", action="store_true", help="re-cut clips that already exist")
     args = ap.parse_args()
 
-    rows = list(csv.DictReader(open(args.manifest), delimiter="\t"))
+    for tool in ("ffmpeg", "yt-dlp"):
+        if not shutil.which(tool):
+            print(f"error: '{tool}' not found on PATH", file=sys.stderr)
+            return 1
+    if not args.manifest.exists():
+        print(f"error: manifest not found: {args.manifest}", file=sys.stderr)
+        return 1
+
+    with open(args.manifest, newline="", encoding="utf-8") as fh:
+        rows = list(csv.DictReader(fh, delimiter="\t"))
     if args.only:
         want = set(args.only)
         rows = [r for r in rows if r["stimulus"] in want]
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     made = skipped = no_source = failed = 0
-    for i, row in enumerate(rows):
+    for row in rows:
         if args.limit and made + failed >= args.limit:
             break
         out_path = args.output_dir / row["stimulus"]

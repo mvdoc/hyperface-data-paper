@@ -99,7 +99,7 @@ def similarity(ref: list[int], test: list[int], win: int = WIN) -> float:
     for i, rh in enumerate(ref):
         c = int(i * n_test / len(ref))
         j0, j1 = max(0, c - win), min(n_test, c + win + 1)
-        best = max(HASH_BITS - bin(rh ^ test[j]).count("1") for j in range(j0, j1))
+        best = max(HASH_BITS - (rh ^ test[j]).bit_count() for j in range(j0, j1))
         vals.append(best / HASH_BITS)
     return float(np.median(vals))
 
@@ -127,7 +127,7 @@ def load_fingerprints(path: str | Path) -> dict[str, list[int]]:
     """Read a ``stimulus_fingerprints.tsv`` -> {stimulus: [frame hashes]}."""
     import csv
     out = {}
-    with open(path, newline="") as fh:
+    with open(path, newline="", encoding="utf-8") as fh:
         for row in csv.DictReader(fh, delimiter="\t"):
             out[row["stimulus"]] = decode(row["frame_phash"])
     return out
