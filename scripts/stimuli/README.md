@@ -61,6 +61,12 @@ original stored clip with two metrics:
   surviving source is a re-encode. Correctly located clips score ≥ 0.94; a wrong time or
   crop scores ≤ 0.46.
 
+The counts below reflect every reproduction the authors confirmed against their original
+stored clips (674 as `parity` or `close`), independent of whether the source is still
+online. Since verification, 188 of those source videos have been removed from YouTube, so
+a download today reproduces only the 486 clips reported above; the other 188 remain
+verified but no longer obtainable.
+
 | `verified` | count | meaning |
 |------------|------:|---------|
 | `parity` | 517 | reproduces the original frame for frame (≥ 90 % of aligned frames at SSIM ≥ 0.90; `robust_ncc` ≥ 0.94) |
