@@ -39,10 +39,29 @@ varies: most clips are 4 s (120 frames) and about 340 are longer (commonly 5 s /
 150 frames), so `duration_s` gives each clip's stored length. The `start` column may be
 written as `H:MM:SS`, `M:SS`, or decimal seconds, all of which `ffmpeg -ss` accepts.
 
+### If YouTube blocks the download
+
+YouTube answers anonymous requests from flagged IPs with "Sign in to confirm you're not
+a bot". `generate_stimuli.py` first tries yt-dlp's default client and falls back to the
+`android_vr` player client, which (as of July 2026) is not gated and serves up to 720p;
+because the stimuli are silent, its video-only streams are sufficient. If both attempts
+are blocked (reported as `[blocked]`, distinct from `[unavailable]` = video deleted),
+pass extra yt-dlp options through, e.g.:
+
+```bash
+python generate_stimuli.py --ytdlp-args "--cookies-from-browser firefox"
+```
+
+or install a proof-of-origin (PO) token provider plugin such as
+[bgutil-ytdlp-pot-provider](https://github.com/Brainicism/bgutil-ytdlp-pot-provider);
+see the [yt-dlp PO Token Guide](https://github.com/yt-dlp/yt-dlp/wiki/PO-Token-Guide).
+Client gating changes over time, so keep `yt-dlp` itself up to date as well.
+
 ## Coverage
 
 Source videos are removed from YouTube over time. As of July 2026, 58 of the 177 source
-videos (195 clips) have been deleted, so a regeneration today yields:
+videos (195 clips) are no longer downloadable (48 made private, 10 deleted, terminated,
+or blocked), so a regeneration today yields:
 
 - 486 / 707 clips reproducible (366 frame-for-frame, 120 from a re-encoded source)
 - 221 / 707 missing (source deleted, no source recorded, or source altered)
