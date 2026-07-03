@@ -71,8 +71,8 @@ verified but no longer obtainable.
 |------------|------:|---------|
 | `parity` | 517 | reproduces the original frame for frame (≥ 90 % of aligned frames at SSIM ≥ 0.90; `robust_ncc` ≥ 0.94) |
 | `close` | 157 | same clip, but the current source is a re-encode (lower frame rate or desaturated) that lowers SSIM; confirmed at `robust_ncc` ≥ 0.70 |
-| `unverified` | 4 | `face050`, `face054`, `face056`, `face058`: the only surviving source is a different upload of the same event, with different framing and timing, so the clip cannot be reproduced. Flagged `regenerable=no`; `source_url` kept as provenance |
-| `source_unavailable` | 29 | source video deleted. Flagged `regenerable=no` |
+| `unverified` | 4 | `face050`, `face054`, `face056`, `face058`: the original full-length source was missing from the authors' archive, and the only surviving upload is a different capture of the same event, with different framing and timing, so the clip cannot be reproduced or verified. Flagged `regenerable=no`; `source_url` kept as provenance |
+| `source_unavailable` | 29 | source video deleted from YouTube and not held in the authors' archive, so the clip could be neither regenerated nor verified. Flagged `regenerable=no` |
 
 ## Verifying a regeneration
 
