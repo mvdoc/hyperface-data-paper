@@ -51,22 +51,47 @@ def video_id(url: str) -> str:
     return url.rsplit("v=", 1)[-1]
 
 
-def download_source(url: str, cache: Path) -> Path | None:
-    """Download the source video once (cached). Returns path or None if unavailable."""
+# yt-dlp download strategies, tried in order. YouTube gates its default web client
+# behind proof-of-origin (PO) tokens and answers anonymous requests with "Sign in to
+# confirm you're not a bot"; the android_vr client is currently exempt and serves up
+# to 720p. It often only offers video-only streams, which is fine: the stimuli are
+# silent (the clips are cut with -an). See the yt-dlp PO Token Guide:
+# https://github.com/yt-dlp/yt-dlp/wiki/PO-Token-Guide
+_YTDLP_STRATEGIES = [
+    ["-f", "mp4[height<=720]/best[height<=720]/best"],
+    ["--extractor-args", "youtube:player_client=android_vr",
+     "-f", "bestvideo[height<=720][ext=mp4]/best[height<=720][ext=mp4]"
+           "/best[height<=720]/best"],
+]
+
+
+def download_source(url: str, cache: Path, extra_args: list[str]) -> Path | str:
+    """Download the source video once (cached). Returns the path, or an error label:
+    'blocked' (bot check / sign-in required -- the video may still exist) or
+    'unavailable' (deleted, private, or otherwise gone)."""
     cache.mkdir(parents=True, exist_ok=True)
     dst = cache / f"{video_id(url)}.mp4"
     if dst.exists() and dst.stat().st_size > 100_000:
         return dst
-    try:
-        subprocess.run(
-            ["yt-dlp", "-q", "--no-warnings",
-             "-f", "mp4[height<=720]/best[height<=720]/best",
-             "-o", str(dst), url],
-            check=True, timeout=600,
-        )
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-        return None
-    return dst if dst.exists() else None
+    blocked = False
+    for strategy in _YTDLP_STRATEGIES:
+        try:
+            proc = subprocess.run(
+                ["yt-dlp", "-q", "--no-warnings", *strategy, *extra_args,
+                 "-o", str(dst), url],
+                capture_output=True, text=True, timeout=600,
+            )
+        except subprocess.TimeoutExpired:
+            continue
+        if proc.returncode == 0 and dst.exists():
+            return dst
+        err = proc.stderr.lower()
+        # label reflects the LAST attempt: a bot check is worth retrying with the
+        # next client, but a clear "unavailable" from any client is authoritative
+        blocked = "sign in" in err or "not a bot" in err or "captcha" in err
+        if not blocked:
+            break
+    return "blocked" if blocked else "unavailable"
 
 
 def crop_filter(row: dict) -> str | None:
@@ -112,7 +137,12 @@ def main() -> int:
     ap.add_argument("--only", nargs="+", help="regenerate only these stimuli")
     ap.add_argument("--limit", type=int, help="stop after N stimuli (smoke test)")
     ap.add_argument("--overwrite", action="store_true", help="re-cut existing clips")
+    ap.add_argument("--ytdlp-args", default="",
+                    help="extra arguments passed through to yt-dlp, e.g. "
+                         '"--cookies-from-browser firefox" if YouTube blocks '
+                         "the anonymous download")
     args = ap.parse_args()
+    extra_args = args.ytdlp_args.split()
 
     for tool in ("ffmpeg", "yt-dlp"):
         if not shutil.which(tool):
@@ -143,10 +173,14 @@ def main() -> int:
                 else "no source recovered"
             print(f"[no-source] {row['stimulus']} ({note})")
             continue
-        video = download_source(row["source_url"], args.video_cache)
-        if video is None:
+        video = download_source(row["source_url"], args.video_cache, extra_args)
+        if isinstance(video, str):
             no_source += 1
-            print(f"[unavailable] {row['stimulus']} <- {row['source_url']}")
+            if video == "blocked":
+                print(f"[blocked] {row['stimulus']} <- {row['source_url']} "
+                      "(bot check; see --ytdlp-args and the README)")
+            else:
+                print(f"[unavailable] {row['stimulus']} <- {row['source_url']}")
             continue
         ok = generate_one(row, video, out_path)
         if ok:
