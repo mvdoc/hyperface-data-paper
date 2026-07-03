@@ -26,6 +26,7 @@ Examples
 """
 import argparse
 import csv
+import shlex
 import shutil
 import subprocess
 import sys
@@ -142,7 +143,7 @@ def main() -> int:
                          '"--cookies-from-browser firefox" if YouTube blocks '
                          "the anonymous download")
     args = ap.parse_args()
-    extra_args = args.ytdlp_args.split()
+    extra_args = shlex.split(args.ytdlp_args)
 
     for tool in ("ffmpeg", "yt-dlp"):
         if not shutil.which(tool):
