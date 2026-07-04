@@ -37,6 +37,23 @@ datalad install -r data
 datalad get data/sub-sid000005/
 ```
 
+### Stimuli
+
+The video stimuli are short clips cut from publicly available YouTube videos and cannot be
+redistributed for copyright reasons, so they are not included in the OpenNeuro dataset. To
+reconstruct the stimulus set from the original sources, use the pipeline in
+[`scripts/stimuli/`](scripts/stimuli/README.md):
+
+```bash
+pip install yt-dlp                              # ffmpeg must also be on PATH
+python scripts/stimuli/generate_stimuli.py      # re-cut clips -> ./regenerated_stimuli/
+python scripts/stimuli/verify_stimuli.py        # verify against released fingerprints
+```
+
+Source videos are removed from YouTube over time; as of July 2026, 486 of the 707 clips can
+be regenerated. See the [stimuli README](scripts/stimuli/README.md) for the per-run
+breakdown and verification details.
+
 ## Quality Assurance
 
 The repository includes a comprehensive QA pipeline for assessing data quality.
@@ -81,7 +98,6 @@ All outputs are saved to `data/derivatives/qa/` following BIDS conventions.
 ```
 hyperface-data-paper/
 ├── data/                           # BIDS dataset (OpenNeuro ds007329)
-│   ├── stimuli/                    # 707 video clips (4s each)
 │   └── derivatives/
 │       ├── fmriprep/               # fMRIPrep 25.1.4 (OpenNeuro ds007384)
 │       ├── freesurfer/             # FreeSurfer 7.3.2 (OpenNeuro ds007378)
@@ -89,8 +105,16 @@ hyperface-data-paper/
 │       ├── stimuli/                # Stimulus descriptors (embeddings, RDMs, ratings)
 │       └── jiahui-2023/            # Data from Jiahui et al. (2023) PNAS
 ├── src/hyperface/                  # Python analysis package
-└── scripts/qa/                     # QA pipeline scripts
+└── scripts/
+    ├── qa/                         # QA pipeline scripts
+    ├── stimuli/                    # Regenerate & verify the video stimuli
+    └── presentation/               # Experiment presentation code
 ```
+
+The raw video stimuli are **not** part of the dataset — they are short clips from
+publicly available YouTube videos and cannot be redistributed for copyright reasons.
+Reconstruct them from the original sources with
+[`scripts/stimuli/`](scripts/stimuli/README.md) (see [Stimuli](#stimuli)).
 
 ## Citation
 

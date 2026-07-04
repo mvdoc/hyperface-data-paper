@@ -2,12 +2,24 @@
 
 ## tSNR Analysis
 - `qa-save-tsnr-volume.py` - Compute temporal signal-to-noise ratio (tSNR) for fMRI data in volume space
+- `qa-save-tsnr-surface.py` - Compute tSNR for surface (fsaverage6) data
 - `qa-plot-tsnr.py` - Generate quality assurance visualizations from pre-computed tSNR data
 - `qa-generate-html-reports-tsnr.py` - Generate interactive HTML reports for tSNR
+- `print-tsnr-summary.py` - Print tSNR summary statistics for the paper
 
 ## Motion Analysis
 - `qa-plot-motion.py` - Generate motion QA plots (motion traces, FD, violin plots)
 - `qa-generate-html-reports-motion.py` - Generate interactive HTML reports for motion
+- `print-motion-summary.py` - Print motion summary statistics for the paper
+
+## Inter-Subject Correlation
+- `qa-save-isc.py` - Compute inter-subject correlation (ISC)
+- `qa-plot-isc.py` - Generate ISC surface visualizations
+
+## Behavior & Participants
+- `qa-plot-accuracy.py` - Plot task accuracy per run for each participant
+- `qa-plot-participant-datasets.py` - Plot a matrix of which participants have data from each dataset
+- `qa-print-participant-demographics.py` - Print participant demographic statistics
 
 ## Usage
 
